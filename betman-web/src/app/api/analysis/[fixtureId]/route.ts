@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 
 const API_BASE = 'https://v3.football.api-sports.io';
 
-const cache = new Map<string, { data: any; ts: number }>();
-const CACHE_TTL = 10 * 60 * 1000; // 10분
+// 종료경기 24h, 진행/예정 5분 캐시
+const cache = new Map<string, { data: any; ts: number; ttl: number }>();
 
 async function apiFetch(path: string) {
   const apiKey = process.env.API_FOOTBALL_KEY;
@@ -32,25 +32,50 @@ export async function GET(
   const { fixtureId } = await params;
 
   const cached = cache.get(fixtureId);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
+  if (cached && Date.now() - cached.ts < cached.ttl) {
     return NextResponse.json({ success: true, ...cached.data, cached: true });
   }
 
   try {
-    // 4개 엔드포인트 병렬 호출
-    const [predictions, events, statistics, lineups] = await Promise.allSettled([
-      apiFetch(`/predictions?fixture=${fixtureId}`),
-      apiFetch(`/fixtures/events?fixture=${fixtureId}`),
-      apiFetch(`/fixtures/statistics?fixture=${fixtureId}`),
-      apiFetch(`/fixtures/lineups?fixture=${fixtureId}`),
-    ]);
+    // Step 1: fixture 기본정보 (1 call) → 팀 ID + 경기 상태 파악
+    const fixtureRaw = await apiFetch(`/fixtures?id=${fixtureId}`);
+    const fi = fixtureRaw[0] ?? null;
+    const homeTeamId: number | null = fi?.teams?.home?.id ?? null;
+    const awayTeamId: number | null = fi?.teams?.away?.id ?? null;
+    const shortStatus: string = fi?.fixture?.status?.short ?? 'NS';
+    const isFinishedOrLive = !['NS', 'TBD', 'CANC', 'PST', 'ABD', 'AWD', 'WO'].includes(shortStatus);
 
-    const pred = predictions.status === 'fulfilled' ? predictions.value : [];
-    const evts = events.status === 'fulfilled' ? events.value : [];
-    const stats = statistics.status === 'fulfilled' ? statistics.value : [];
-    const lnps = lineups.status === 'fulfilled' ? lineups.value : [];
+    // Step 2: 상태에 따라 필요한 데이터만 병렬 호출
+    // 예정(NS): predictions + team fixtures (3 calls)
+    // 진행/종료: events + statistics + lineups + team fixtures (5 calls)
+    const fetchMap: Record<string, Promise<any>> = {
+      teamHome: homeTeamId ? apiFetch(`/fixtures?team=${homeTeamId}&last=20`) : Promise.resolve([]),
+      teamAway: awayTeamId ? apiFetch(`/fixtures?team=${awayTeamId}&last=20`) : Promise.resolve([]),
+    };
 
-    const p = pred[0] ?? null;
+    if (isFinishedOrLive) {
+      fetchMap.events     = apiFetch(`/fixtures/events?fixture=${fixtureId}`);
+      fetchMap.statistics = apiFetch(`/fixtures/statistics?fixture=${fixtureId}`);
+      fetchMap.lineups    = apiFetch(`/fixtures/lineups?fixture=${fixtureId}`);
+      fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
+    } else {
+      // 예정 경기: prediction만
+      fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
+    }
+
+    const keys = Object.keys(fetchMap);
+    const settled = await Promise.allSettled(keys.map(k => fetchMap[k]));
+    const results: Record<string, any[]> = {};
+    keys.forEach((k, i) => {
+      results[k] = settled[i].status === 'fulfilled' ? settled[i].value : [];
+    });
+
+    const pred  = results.predictions ?? [];
+    const evts  = results.events      ?? [];
+    const stats = results.statistics  ?? [];
+    const lnps  = results.lineups     ?? [];
+
+    const p = (pred[0] ?? null) as any;
 
     const prediction = p ? {
       homeWin: p.predictions?.percent?.home ?? null,
@@ -87,16 +112,19 @@ export async function GET(
       total:   p.comparison?.total,
     } : null;
 
-    const h2h = (p?.h2h ?? []).slice(0, 5).map((m: any) => ({
+    const h2h = (p?.h2h ?? []).slice(0, 20).map((m: any) => ({
       date:      m.fixture?.date?.slice(0, 10),
       homeTeam:  m.teams?.home?.name,
+      homeId:    m.teams?.home?.id,
       awayTeam:  m.teams?.away?.name,
+      awayId:    m.teams?.away?.id,
       homeGoals: m.goals?.home,
       awayGoals: m.goals?.away,
       status:    m.fixture?.status?.short,
+      league:    m.league?.name ?? null,
+      season:    m.league?.season ?? null,
     }));
 
-    // 이벤트 (골, 카드, 교체)
     const eventList = evts.map((e: any) => ({
       minute:  e.time?.elapsed,
       extra:   e.time?.extra ?? null,
@@ -104,11 +132,10 @@ export async function GET(
       team:    e.team?.name,
       player:  e.player?.name,
       assist:  e.assist?.name ?? null,
-      type:    e.type,    // 'Goal' | 'Card' | 'subst' | 'Var'
-      detail:  e.detail,  // 'Normal Goal' | 'Yellow Card' | 'Red Card' | 'Substitution 1' ...
+      type:    e.type,
+      detail:  e.detail,
     }));
 
-    // 통계 (홈, 원정)
     const statList = stats.map((teamStat: any) => ({
       team: teamStat.team?.name,
       teamId: teamStat.team?.id,
@@ -118,21 +145,20 @@ export async function GET(
       })),
     }));
 
-    // 라인업
     const lineupList = lnps.map((l: any) => ({
       team:      l.team?.name,
       teamId:    l.team?.id,
       formation: l.formation ?? null,
-      startXI: (l.startXI ?? []).map((p: any) => ({
-        number: p.player?.number,
-        name:   p.player?.name,
-        pos:    p.player?.pos,
-        grid:   p.player?.grid,
+      startXI: (l.startXI ?? []).map((pl: any) => ({
+        number: pl.player?.number,
+        name:   pl.player?.name,
+        pos:    pl.player?.pos,
+        grid:   pl.player?.grid,
       })),
-      substitutes: (l.substitutes ?? []).map((p: any) => ({
-        number: p.player?.number,
-        name:   p.player?.name,
-        pos:    p.player?.pos,
+      substitutes: (l.substitutes ?? []).map((pl: any) => ({
+        number: pl.player?.number,
+        name:   pl.player?.name,
+        pos:    pl.player?.pos,
       })),
       coach: l.coach?.name ?? null,
     }));
@@ -140,10 +166,46 @@ export async function GET(
     const season = p?.league?.season ?? null;
     const round  = p?.league?.round  ?? null;
 
-    const result = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, season, round };
+    function normalizeRecent(fixtures: any[], teamId: number | null) {
+      return fixtures
+        .sort((a: any, b: any) => new Date(b.fixture?.date).getTime() - new Date(a.fixture?.date).getTime())
+        .map((f: any) => {
+          const isHome = f.teams?.home?.id === teamId;
+          const myGoals   = isHome ? f.goals?.home : f.goals?.away;
+          const oppGoals  = isHome ? f.goals?.away : f.goals?.home;
+          const oppTeam   = isHome ? f.teams?.away?.name : f.teams?.home?.name;
+          const result =
+            myGoals == null || oppGoals == null ? null
+            : myGoals > oppGoals ? 'W'
+            : myGoals === oppGoals ? 'D'
+            : 'L';
+          return {
+            date:      f.fixture?.date?.slice(0, 10),
+            league:    f.league?.name ?? null,
+            homeTeam:  f.teams?.home?.name,
+            awayTeam:  f.teams?.away?.name,
+            homeGoals: f.goals?.home,
+            awayGoals: f.goals?.away,
+            myGoals,
+            oppGoals,
+            oppTeam,
+            isHome,
+            result,
+            status: f.fixture?.status?.short,
+          };
+        });
+    }
 
-    cache.set(fixtureId, { data: result, ts: Date.now() });
-    return NextResponse.json({ success: true, ...result });
+    const homeLast20 = normalizeRecent(results.teamHome ?? [], homeTeamId);
+    const awayLast20 = normalizeRecent(results.teamAway ?? [], awayTeamId);
+
+    const ttl = shortStatus === 'FT' || shortStatus === 'AET' || shortStatus === 'PEN'
+      ? 24 * 60 * 60 * 1000  // 종료 경기: 24시간
+      : 5 * 60 * 1000;        // 예정/진행: 5분
+
+    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, season, round, homeLast20, awayLast20 };
+    cache.set(fixtureId, { data, ts: Date.now(), ttl });
+    return NextResponse.json({ success: true, ...data });
   } catch (err: any) {
     console.error(`[Analysis] ${fixtureId} 오류:`, err.message);
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });

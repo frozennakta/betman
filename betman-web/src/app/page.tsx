@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Flame, TrendingUp, Zap, RefreshCw, Search, ShieldCheck, Globe,
-  Calendar, Radio, ChevronUp, ChevronDown, ArrowUpDown, X, Sun, Moon,
+  Flame, Zap, RefreshCw, Search,
+  Calendar, ChevronUp, ChevronDown, ArrowUpDown, X, Sun, Moon,
+  Bell, BellOff, Star, ChevronLeft, ChevronRight,
 } from 'lucide-react';
-import MatchCard from '@/components/MatchCard';
+import MatchCard, { useFavorites } from '@/components/MatchCard';
+import OddsCalculator from '@/components/OddsCalculator';
 import { useTheme } from '@/context/ThemeContext';
 
 type SortKey = 'time' | 'league' | 'country';
@@ -60,20 +62,64 @@ export default function HomePage() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showJumpLive, setShowJumpLive] = useState(false);
 
+  // ── 즐겨찾기 ─────────────────────────────────────────────────────────────
+  const { favorites, toggle: toggleFav, isFav } = useFavorites();
+
+  // ── 날짜 필터 (0=오늘, -1=어제, 1=내일) ─────────────────────────────────
+  const [dateOffset, setDateOffset] = useState(0);
+  const offsetLabel = (offset: number) =>
+    offset === -1 ? '어제' : offset === 0 ? '오늘' : '내일';
+
+  // ── 알림 ─────────────────────────────────────────────────────────────────
+  const [notifEnabled, setNotifEnabled] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('betman-notify-enabled') === 'true'; } catch { return false; }
+  });
+  const prevStatusRef = useRef<Record<string, string>>({});
+
+  const toggleNotif = useCallback(async () => {
+    if (!notifEnabled) {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        setNotifEnabled(true);
+        try { localStorage.setItem('betman-notify-enabled', 'true'); } catch {}
+      }
+    } else {
+      setNotifEnabled(false);
+      try { localStorage.setItem('betman-notify-enabled', 'false'); } catch {}
+    }
+  }, [notifEnabled]);
+
   const { isLight, toggle: toggleTheme } = useTheme();
 
   const liveRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // ── 데이터 fetch ──────────────────────────────────────────────────────────
-  const fetchGames = async () => {
+  const fetchGames = useCallback(async () => {
     try {
       const res = await axios.get('/api/games');
       if (res.data.success) {
         if (res.data.status === 'LOADING_INITIAL') {
           setInitialLoading(true);
         } else {
-          setGames(res.data.games);
+          const newGames: any[] = res.data.games;
+          // 알림: PENDING → LIVE 전환 감지
+          if (notifEnabled && Notification.permission === 'granted') {
+            newGames.forEach(g => {
+              const prev = prevStatusRef.current[g.id];
+              const LIVE_SET = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
+              if (prev === 'PENDING' && LIVE_SET.has(g.rawStatus)) {
+                new Notification(`🔴 ${g.homeTeam} vs ${g.awayTeam} 경기 시작!`, {
+                  body: `${g.country} · ${g.league}`,
+                  tag: g.id,
+                });
+              }
+            });
+          }
+          // 현재 상태 기록
+          newGames.forEach(g => { prevStatusRef.current[g.id] = g.liveStatus ?? g.rawStatus; });
+          setGames(newGames);
           setInitialLoading(false);
           setLastUpdated(new Date(res.data.lastUpdated || Date.now()).toLocaleTimeString());
         }
@@ -83,14 +129,14 @@ export default function HomePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [notifEnabled]);
 
   useEffect(() => {
     fetchGames();
     const fetchInterval = setInterval(() => { fetchGames(); setCountdown(20); }, 20000);
     const cdInterval    = setInterval(() => setCountdown(p => p <= 1 ? 20 : p - 1), 1000);
     return () => { clearInterval(fetchInterval); clearInterval(cdInterval); };
-  }, []);
+  }, [fetchGames]);
 
   // ── 스크롤 이벤트 ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -128,23 +174,30 @@ export default function HomePage() {
     return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([l]) => l);
   }, [games]);
 
+  const LIVE_STATUS = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
+  const byDate = (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime();
+
+  // ── 날짜 필터링 + 검색/리그 필터 ─────────────────────────────────────────
   const filteredGames = useMemo(() => {
     const s = searchTerm.toLowerCase();
+    // Step 1: date offset filter
+    const target = new Date();
+    target.setDate(target.getDate() + dateOffset);
+    const targetStr = target.toDateString();
+
     return games.filter(g => {
+      const dateOk = new Date(g.date).toDateString() === targetStr;
       const textOk = !s ||
         g.homeTeam.toLowerCase().includes(s) ||
         g.awayTeam.toLowerCase().includes(s) ||
         g.league.toLowerCase().includes(s) ||
         g.country.toLowerCase().includes(s);
       const leagueOk = !leagueFilter || g.league === leagueFilter;
-      return textOk && leagueOk;
+      return dateOk && textOk && leagueOk;
     });
-  }, [games, searchTerm, leagueFilter]);
+  }, [games, searchTerm, leagueFilter, dateOffset]);
 
-  const LIVE = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
-  const byDate = (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime();
-
-  const liveGames     = useMemo(() => filteredGames.filter(g => LIVE.has(g.rawStatus)).sort(byDate),  [filteredGames]);
+  const liveGames     = useMemo(() => filteredGames.filter(g => LIVE_STATUS.has(g.rawStatus)).sort(byDate),  [filteredGames]);
   const upcomingGames = useMemo(() => {
     const now = new Date();
     return filteredGames.filter(g => g.liveStatus === 'PENDING' && new Date(g.date) > now).sort(byDate);
@@ -157,8 +210,16 @@ export default function HomePage() {
   const upcomingGroups = useMemo(() => makeGroups(upcomingGames, sortKey),        [upcomingGames, sortKey]);
   const finishedGroups = useMemo(() => makeGroups(finishedGames, 'time', true),   [finishedGames]);
 
-  const todayCount    = useMemo(() => { const t = new Date().toDateString(); return games.filter(g => new Date(g.date).toDateString() === t).length; }, [games]);
-  const tomorrowCount = useMemo(() => { const d = new Date(); d.setDate(d.getDate()+1); const t = d.toDateString(); return games.filter(g => new Date(g.date).toDateString() === t).length; }, [games]);
+  // ── 날짜별 총 경기 수 (배지용) ────────────────────────────────────────────
+  const countForOffset = useCallback((offset: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    const ds = d.toDateString();
+    return games.filter(g => new Date(g.date).toDateString() === ds).length;
+  }, [games]);
+
+  // ── 즐겨찾기 경기 목록 ────────────────────────────────────────────────────
+  const favoriteGames = useMemo(() => games.filter(g => isFav(g.id)), [games, favorites]);
 
   const toggleGroup = (key: string) => {
     setCollapsedGroups(prev => {
@@ -211,8 +272,24 @@ export default function HomePage() {
             </div>
 
             <div className="flex flex-col gap-3 md:items-end">
-              {/* 다크/라이트 토글 */}
-              <div className="flex justify-end">
+              {/* 상단 버튼 열 */}
+              <div className="flex items-center gap-2">
+                {/* 알림 버튼 */}
+                <button
+                  onClick={toggleNotif}
+                  title={notifEnabled ? '알림 끄기' : '경기 시작 알림 켜기'}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                    notifEnabled
+                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30'
+                      : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                  }`}
+                >
+                  {notifEnabled
+                    ? <Bell className="w-4 h-4" />
+                    : <BellOff className="w-4 h-4" />}
+                  <span className="text-[11px] font-black">{notifEnabled ? 'ON' : 'OFF'}</span>
+                </button>
+                {/* 다크/라이트 토글 */}
                 <button
                   onClick={toggleTheme}
                   className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all text-slate-400 hover:text-white"
@@ -222,6 +299,7 @@ export default function HomePage() {
                   <span className="text-[11px] font-black">{isLight ? 'DARK' : 'LIGHT'}</span>
                 </button>
               </div>
+
               {/* 검색창 */}
               <div className="relative w-full md:w-80 group">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
@@ -257,9 +335,43 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* ── 날짜 네비게이션 ──────────────────────────────────────────── */}
+          <div className="mt-5 flex items-center gap-2">
+            <button
+              onClick={() => setDateOffset(v => Math.max(v - 1, -1))}
+              disabled={dateOffset <= -1}
+              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            {([-1, 0, 1] as const).map(offset => (
+              <button
+                key={offset}
+                onClick={() => setDateOffset(offset)}
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
+                  dateOffset === offset
+                    ? 'bg-indigo-500 border-indigo-500 text-white'
+                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                }`}
+              >
+                {offsetLabel(offset)}
+                <span className={`text-[9px] ${dateOffset === offset ? 'text-indigo-200' : 'text-slate-600'}`}>
+                  {countForOffset(offset)}
+                </span>
+              </button>
+            ))}
+            <button
+              onClick={() => setDateOffset(v => Math.min(v + 1, 1))}
+              disabled={dateOffset >= 1}
+              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* 리그 빠른 필터 */}
           {popularLeagues.length > 0 && (
-            <div className="mt-5 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap gap-2">
               <button
                 onClick={() => setLeagueFilter('')}
                 className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
@@ -293,10 +405,33 @@ export default function HomePage() {
             <p className="text-slate-600 font-black italic">FETCHING DATA...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-10">
+          <div>
+
+            {/* ── 즐겨찾기 섹션 ───────────────────────────────────────── */}
+            {favoriteGames.length > 0 && (
+              <section className="mb-12">
+                <div className="flex items-center gap-3 mb-4">
+                  <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
+                  <h2 className="text-xl font-black text-white tracking-tight">즐겨찾기</h2>
+                  <span className="bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg text-[10px] font-black text-amber-400">
+                    {favoriteGames.length}
+                  </span>
+                </div>
+                <div className="grid gap-2">
+                  {favoriteGames.map(g => (
+                    <MatchCard
+                      key={g.id}
+                      game={g}
+                      isFavorite={isFav(g.id)}
+                      onToggleFav={toggleFav}
+                    />
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* ── 메인 컨텐츠 ─────────────────────────────────────────── */}
-            <div className="xl:col-span-8 space-y-12">
+            <div className="space-y-12">
 
               {/* LIVE */}
               {liveGames.length > 0 && (
@@ -312,7 +447,14 @@ export default function HomePage() {
                     </span>
                   </div>
                   <div className="grid gap-3">
-                    {liveGames.map(game => <MatchCard key={game.id} game={game} />)}
+                    {liveGames.map(game => (
+                      <MatchCard
+                        key={game.id}
+                        game={game}
+                        isFavorite={isFav(game.id)}
+                        onToggleFav={toggleFav}
+                      />
+                    ))}
                   </div>
                 </section>
               )}
@@ -377,7 +519,14 @@ export default function HomePage() {
                                 className="overflow-hidden"
                               >
                                 <div className="grid gap-2">
-                                  {group.games.map((g: any) => <MatchCard key={g.id} game={g} />)}
+                                  {group.games.map((g: any) => (
+                                    <MatchCard
+                                      key={g.id}
+                                      game={g}
+                                      isFavorite={isFav(g.id)}
+                                      onToggleFav={toggleFav}
+                                    />
+                                  ))}
                                 </div>
                               </motion.div>
                             )}
@@ -387,8 +536,8 @@ export default function HomePage() {
                     })}
                   </div>
                 ) : (
-                  <div className="p-20 text-center bg-[#0d1425] rounded-3xl border border-white/5 border-dashed">
-                    <p className="text-slate-500 font-bold" style={{ color: 'var(--text-primary)', opacity: 0.4 }}>탐색된 경기가 없습니다.</p>
+                  <div className="p-20 text-center bg-[var(--bg-card)] rounded-3xl border border-white/5 border-dashed">
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)', opacity: 0.4 }}>탐색된 경기가 없습니다.</p>
                     <button
                       onClick={() => { setSearchTerm(''); setLeagueFilter(''); }}
                       className="mt-4 text-xs font-black text-indigo-400 hover:text-indigo-300 underline underline-offset-4"
@@ -441,7 +590,14 @@ export default function HomePage() {
                                 className="overflow-hidden"
                               >
                                 <div className="grid gap-2">
-                                  {group.games.map((g: any) => <MatchCard key={g.id} game={g} />)}
+                                  {group.games.map((g: any) => (
+                                    <MatchCard
+                                      key={g.id}
+                                      game={g}
+                                      isFavorite={isFav(g.id)}
+                                      onToggleFav={toggleFav}
+                                    />
+                                  ))}
                                 </div>
                               </motion.div>
                             )}
@@ -454,126 +610,15 @@ export default function HomePage() {
               )}
             </div>
 
-            {/* ── 사이드바 ─────────────────────────────────────────────── */}
-            <div className="xl:col-span-4 space-y-6">
-
-              {/* 실시간 현황 */}
-              <motion.section
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="bg-indigo-600 rounded-3xl p-6 shadow-2xl shadow-indigo-600/30 overflow-hidden relative group"
-              >
-                <div className="relative z-10">
-                  <div className="flex items-center space-x-2 text-white/80 mb-5 bg-white/10 w-fit px-3 py-1 rounded-full border border-white/10">
-                    <Radio className="w-3 h-3" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Live Intelligence</span>
-                  </div>
-                  <h3 className="text-2xl font-black text-white mb-1 leading-tight">실시간<br/>경기 현황</h3>
-                  <p className="text-white/60 text-xs font-medium mb-6">접속자 로컬 타임 기준</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { label: '라이브',  val: liveGames.length,     color: 'text-red-400' },
-                      { label: '예정',    val: upcomingGames.length,  color: 'text-orange-400' },
-                      { label: '오늘',    val: todayCount,            color: 'text-emerald-400' },
-                      { label: '내일',    val: tomorrowCount,         color: 'text-sky-400' },
-                    ].map(({ label, val, color }) => (
-                      <div key={label} className="p-4 bg-black/20 rounded-2xl border border-white/10">
-                        <div className={`text-2xl font-black ${color} mb-1`}>{val}</div>
-                        <div className="text-[9px] font-black text-white/50 uppercase tracking-widest">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* 갱신 카운트다운 */}
-                  <div className="mt-4 flex items-center justify-between bg-black/20 rounded-xl px-3 py-2.5 border border-white/10">
-                    <span className="text-[10px] font-bold text-white/50">다음 갱신</span>
-                    <div className="flex items-center gap-2">
-                      <div className="w-16 h-1 bg-white/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-white/40 transition-all duration-1000" style={{ width: `${((20 - countdown) / 20) * 100}%` }} />
-                      </div>
-                      <span className="text-[10px] font-black text-white/70 tabular-nums w-6">{countdown}s</span>
-                    </div>
-                  </div>
-                </div>
-                <Globe className="absolute -bottom-10 -right-10 w-48 h-48 text-white/5 rotate-12 group-hover:rotate-45 transition-transform duration-1000" />
-              </motion.section>
-
-              {/* 시스템 인텔리전스 */}
-              <section className="bg-[var(--bg-card)] border border-white/5 rounded-3xl p-6">
-                <div className="flex items-center space-x-3 mb-5">
-                  <div className="p-2 bg-indigo-500/20 rounded-xl">
-                    <ShieldCheck className="w-5 h-5 text-indigo-400" />
-                  </div>
-                  <h3 className="text-lg font-black text-white">시스템 인텔리전스</h3>
-                </div>
-                <div className="space-y-2">
-                  {[
-                    { label: '라이브', val: liveGames.length,     color: 'text-red-400' },
-                    { label: '오늘',   val: todayCount,           color: 'text-emerald-400' },
-                    { label: '내일',   val: tomorrowCount,        color: 'text-sky-400' },
-                    { label: '전체',   val: games.length,         color: 'text-indigo-400' },
-                    { label: '종료',   val: finishedGames.length, color: 'text-slate-500' },
-                  ].map(({ label, val, color }) => (
-                    <div key={label} className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-2.5 border border-white/5">
-                      <span className="text-xs font-bold text-slate-400">{label}</span>
-                      <span className={`text-sm font-black ${color}`}>{val}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 p-3 bg-white/5 rounded-xl flex items-center justify-between border border-white/5">
-                  <span className="text-[10px] font-bold text-slate-400">모니터링 상태</span>
-                  <span className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <span className="text-[10px] font-black text-white">EXCELLENT</span>
-                  </span>
-                </div>
-              </section>
-
-              {/* 인기 리그 */}
-              {popularLeagues.length > 0 && (
-                <section className="bg-[var(--bg-card)] border border-white/5 rounded-3xl p-6">
-                  <div className="flex items-center space-x-3 mb-5">
-                    <div className="p-2 bg-orange-500/20 rounded-xl">
-                      <TrendingUp className="w-5 h-5 text-orange-400" />
-                    </div>
-                    <h3 className="text-lg font-black text-white">인기 리그</h3>
-                  </div>
-                  <div className="space-y-2">
-                    {popularLeagues.map((league, i) => {
-                      const cnt = games.filter(g => g.league === league).length;
-                      const pct = Math.round((cnt / games.length) * 100);
-                      return (
-                        <button
-                          key={league}
-                          onClick={() => setLeagueFilter(leagueFilter === league ? '' : league)}
-                          className={`w-full flex items-center justify-between rounded-xl px-4 py-2.5 border transition-all text-left ${
-                            leagueFilter === league
-                              ? 'bg-indigo-500/20 border-indigo-500/30'
-                              : 'bg-white/5 border-white/5 hover:border-white/10'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-[10px] font-black text-slate-600 w-4">{i + 1}</span>
-                            <span className="text-xs font-bold text-slate-300 truncate">{league}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <div className="w-12 h-1 bg-white/5 rounded-full overflow-hidden">
-                              <div className="h-full bg-orange-500/60" style={{ width: `${pct}%` }} />
-                            </div>
-                            <span className="text-[10px] font-black text-slate-500 w-6 text-right">{cnt}</span>
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </section>
-              )}
-            </div>
           </div>
         )}
       </div>
 
       {/* ── FAB ─────────────────────────────────────────────────────────── */}
-      <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40">
+      <div className="fixed bottom-6 right-6 flex flex-col gap-2 z-40 items-end">
+        {/* 배당 계산기 FAB */}
+        <OddsCalculator />
+
         <AnimatePresence>
           {showJumpLive && liveGames.length > 0 && (
             <motion.button
@@ -597,7 +642,7 @@ export default function HomePage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="p-3 bg-[#0d1425] hover:bg-white/10 border border-white/10 rounded-2xl shadow-xl text-white transition-colors self-end"
+              className="p-3 bg-[var(--bg-card)] hover:bg-white/10 border border-white/10 rounded-2xl shadow-xl text-white transition-colors self-end"
             >
               <ChevronUp className="w-5 h-5" />
             </motion.button>
