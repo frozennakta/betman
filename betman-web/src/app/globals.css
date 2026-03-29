@@ -3,14 +3,27 @@
 :root {
   --background: #030712;
   --foreground: #f8fafc;
+  --bg-base: #030712;
+  --bg-card: #0d1425;
+  --text-primary: #ffffff;
+}
+
+html.light {
+  --bg-base: #f0f4f8;
+  --bg-card: #ffffff;
+  --text-primary: #111827;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: var(--bg-base);
+  color: var(--text-primary);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   scrollbar-width: thin;
   scrollbar-color: #334155 #030712;
+}
+
+html.light body {
+  scrollbar-color: #94a3b8 #e2e8f0;
 }
 
 /* Custom Scrollbar for Chrome/Safari */
@@ -53,3 +66,70 @@ body {
   backdrop-filter: blur(12px);
   border: 1px solid rgba(79, 70, 229, 0.1);
 }
+
+/* ── 라이트 모드 오버라이드 ──────────────────────────────────────── */
+html.light ::-webkit-scrollbar-track { background: #e2e8f0; }
+html.light ::-webkit-scrollbar-thumb { background: #94a3b8; }
+
+/* ── 주요 텍스트: 밝은 배경에서 가시성 확보 ── */
+html.light .text-white    { color: #111827; }
+html.light .text-slate-100 { color: #1f2937; }
+html.light .text-slate-200 { color: #1f2937; }
+html.light .text-slate-300 { color: #1f2937; }
+html.light .text-slate-400 { color: #374151; }
+html.light .text-slate-500 { color: #4b5563; }
+html.light .text-slate-600 { color: #6b7280; }
+html.light .text-slate-700 { color: #9ca3af; }
+
+/* ── 강조색 텍스트: 밝은 배경에서 진하게 ── */
+html.light .text-indigo-300 { color: #4338ca; }
+html.light .text-indigo-400 { color: #4338ca; }
+html.light .text-purple-400 { color: #7c3aed; }
+html.light .text-sky-400    { color: #0284c7; }
+html.light .text-emerald-400 { color: #059669; }
+html.light .text-orange-400  { color: #d97706; }
+html.light .text-amber-500   { color: #b45309; }
+html.light .text-red-400     { color: #dc2626; }
+html.light .text-yellow-400  { color: #d97706; }
+html.light .text-blue-400    { color: #2563eb; }
+
+/* ── 컬러 배경(버튼/카드) 내부 텍스트는 원본 유지 ── */
+/* 같은 요소에 컬러 bg + text-white */
+html.light .bg-indigo-500.text-white { color: white !important; }
+html.light .bg-indigo-600.text-white { color: white !important; }
+html.light .bg-red-500.text-white    { color: white !important; }
+html.light .bg-emerald-500.text-white { color: white !important; }
+
+/* 컬러 배경 컨테이너 내부 자식 */
+html.light .bg-indigo-600 .text-white  { color: white !important; }
+html.light .bg-indigo-600 .text-white\/80 { color: rgba(255,255,255,0.8) !important; }
+html.light .bg-indigo-600 .text-white\/60 { color: rgba(255,255,255,0.6) !important; }
+html.light .bg-indigo-600 .text-white\/50 { color: rgba(255,255,255,0.5) !important; }
+html.light .bg-indigo-600 .text-slate-400 { color: rgba(255,255,255,0.7) !important; }
+html.light .bg-indigo-600 .text-indigo-300 { color: #a5b4fc !important; }
+html.light .bg-indigo-600 .text-red-400    { color: #fca5a5 !important; }
+html.light .bg-indigo-600 .text-orange-400 { color: #fdba74 !important; }
+html.light .bg-indigo-600 .text-emerald-400 { color: #6ee7b7 !important; }
+html.light .bg-indigo-600 .text-sky-400    { color: #7dd3fc !important; }
+
+/* ── 투명도 배경/보더 오버라이드 ── */
+html.light .border-white\/5  { border-color: rgba(0,0,0,0.09); }
+html.light .border-white\/10 { border-color: rgba(0,0,0,0.13); }
+html.light .bg-white\/5      { background-color: rgba(0,0,0,0.04); }
+html.light .bg-white\/10     { background-color: rgba(0,0,0,0.07); }
+html.light .bg-black\/20     { background-color: rgba(0,0,0,0.05); }
+html.light .bg-black\/30     { background-color: rgba(0,0,0,0.07); }
+html.light .bg-black\/40     { background-color: rgba(0,0,0,0.08); }
+html.light .bg-black\/70     { background-color: rgba(0,0,0,0.45); }
+
+/* 반투명 컬러 배경 */
+html.light .bg-red-500\/10    { background-color: rgba(239,68,68,0.1); }
+html.light .bg-red-500\/20    { background-color: rgba(239,68,68,0.15); }
+html.light .bg-indigo-500\/10 { background-color: rgba(99,102,241,0.1); }
+html.light .bg-indigo-500\/20 { background-color: rgba(99,102,241,0.15); }
+html.light .bg-amber-500\/10  { background-color: rgba(245,158,11,0.1); }
+html.light .bg-emerald-500\/20 { background-color: rgba(16,185,129,0.15); }
+
+/* ── 배경 글로우 억제 ── */
+html.light .bg-indigo-600\/10 { background-color: rgba(79,70,229,0.04); }
+html.light .bg-purple-600\/10 { background-color: rgba(147,51,234,0.04); }

@@ -1,89 +1,114 @@
 import { NextResponse } from 'next/server';
-import { scrapeBetmanData, BetmanGame } from '@/lib/scraper';
-import { fetchLiveScores, findMatchingFixture, LiveMatch } from '@/lib/liveScore';
-import { getEnglishName } from '@/lib/mapping';
+import { fetchTodayFixtures, fetchLiveFixtures, LiveMatch } from '@/lib/liveScore';
 
-/** 
- * 🚀 [시스템 고도화] 백그라운드 실시간 데이터 워커
- * 사용자가 요청할 때 긁어오는 것이 아니라, 서버가 켜져 있는 동안 
- * 백그라운드에서 주기적으로 수집하여 '즉시 응답' 체제로 전환합니다.
- */
+const store = (global as any).betmanStore || {
+  games: [],
+  lastUpdated: 0,
+  todayFixtures: [] as LiveMatch[],
+  initialized: false,   // 첫 번째 liveWorker 실행 완료 여부
+};
+(global as any).betmanStore = store;
 
-interface GlobalStore {
-  games: any[];
-  lastUpdated: number;
+let workersStarted = false;
+
+function normalizeStatus(status: string): string {
+  if (status === 'NS') return 'PENDING';
+  if (['FT', 'AET', 'PEN', 'CANC', 'PST', 'ABD', 'AWD', 'WO'].includes(status)) return 'FT';
+  return status;
 }
 
-// 글로벌 네이티브 객체에 캐시 저장 (Next.js 가 핫 리로딩되어도 어느 정도 유지)
-const globalStore = (global as any).betmanStore || { games: [], lastUpdated: 0 };
-(global as any).betmanStore = globalStore;
+function normalizeGame(match: LiveMatch, index: number) {
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Seoul', hour12: false,
+  }).format(new Date(match.date));
+  return {
+    id: `fixture_${match.fixtureId}`,
+    matchNo: String(index + 1).padStart(2, '0'),
+    homeTeam: match.homeTeam,
+    awayTeam: match.awayTeam,
+    league: match.league,
+    country: match.country,
+    category: '축구',
+    matchTime: time,
+    liveStatus: normalizeStatus(match.status),
+    rawStatus: match.status,
+    homeScore: match.homeScore,
+    awayScore: match.awayScore,
+    elapsed: match.elapsedTime,
+    homeOdds: null,
+    drawOdds: null,
+    awayOdds: null,
+    date: match.date,
+    venue: match.venue ?? null,
+    referee: match.referee ?? null,
+  };
+}
 
-// 백그라운드 수집 루프 시작 (서버 시작 시 1회 실행)
-let isWorkerRunning = false;
+function merge(today: LiveMatch[], live: LiveMatch[]): LiveMatch[] {
+  const liveMap = new Map(live.map(m => [m.fixtureId, m]));
+  const merged = today.map(m => liveMap.get(m.fixtureId) ?? m);
+  const todayIds = new Set(today.map(m => m.fixtureId));
+  const extra = live.filter(m => !todayIds.has(m.fixtureId));
+  return [...merged, ...extra];
+}
 
-async function startBackgroundWorker() {
-  if (isWorkerRunning) return;
-  isWorkerRunning = true;
-  
-  console.log('🤖 [Internal Worker] 백그라운드 수집기 가동 시작...');
-  
-  while (true) {
-    try {
-      console.log('🔄 [Internal Worker] 실시간 데이터 업데이트 중...');
-      const [betmanGames, liveScores] = await Promise.all([
-        scrapeBetmanData(),
-        fetchLiveScores()
-      ]);
+function startWorkers() {
+  if (workersStarted) return;
+  workersStarted = true;
 
-      const merged = betmanGames.map((game: BetmanGame) => {
-        const homeEn = getEnglishName(game.homeTeam);
-        const awayEn = getEnglishName(game.awayTeam);
-        const live: LiveMatch | null = findMatchingFixture(homeEn, awayEn, liveScores);
-
-        return {
-          ...game,
-          liveStatus: live ? live.status : 'PENDING',
-          homeScore: live ? live.homeScore : null,
-          awayScore: live ? live.awayScore : null,
-          elapsed: live ? live.elapsedTime : null
-        };
-      });
-
-      globalStore.games = merged;
-      globalStore.lastUpdated = Date.now();
-      console.log(`✅ [Internal Worker] 업데이트 완료: ${merged.length}개 (다음 주기 대기)`);
-    } catch (e) {
-      console.error('❌ [Internal Worker] 수집 중 오류 발생:', e);
+  // ── Worker 1: 전체 경기 목록 — 8시간마다 ──────────────────────────────
+  const todayWorker = async () => {
+    while (true) {
+      try {
+        store.todayFixtures = await fetchTodayFixtures();
+        console.log(`📅 [Today] ${store.todayFixtures.length}경기 갱신`);
+      } catch (e) {
+        console.error('❌ [Today] 오류:', e);
+      }
+      await new Promise(r => setTimeout(r, 8 * 60 * 60 * 1000));
     }
-    
-    // 30분마다 재수집 (무료 플랜 100 req/day 기준 안전 주기)
-    await new Promise(resolve => setTimeout(resolve, 30 * 60 * 1000));
-  }
+  };
+
+  // ── Worker 2: 라이브 스코어 — 20분마다 ────────────────────────────────
+  const liveWorker = async () => {
+    // todayWorker가 첫 번째 API 응답을 받을 때까지 대기
+    await new Promise(r => setTimeout(r, 12000));
+    while (true) {
+      try {
+        const live = await fetchLiveFixtures();
+        const merged = merge(store.todayFixtures, live);
+        store.games = merged.map(normalizeGame);
+        store.lastUpdated = Date.now();
+        console.log(`⚡ [Live] 라이브 ${live.length}개 · 총 ${store.games.length}경기`);
+      } catch (e) {
+        console.error('❌ [Live] 오류:', e);
+      }
+      // 성공/실패 모두 initialized = true (빈 배열이어도 로딩 화면 탈출)
+      store.initialized = true;
+      await new Promise(r => setTimeout(r, 20 * 60 * 1000));
+    }
+  };
+
+  todayWorker();
+  liveWorker();
 }
 
-// API 호출 시 워커가 안 돌아가고 있으면 시작만 시켜줌
-if (!isWorkerRunning) {
-  startBackgroundWorker();
-}
+startWorkers();
 
 export async function GET() {
-  // 사용자는 수집을 기다리지 않고, 즉시 '가장 최신 데이터'를 받음 (0.1초 이내)
-  console.log('⚡ [API] 즉시 응답 반환 중...');
-  
-  // 데이터가 아예 없을 경우 (최초 가동 시) 0.5초만 기다려보고 그래도 없으면 빈 배열 대신 바로 반환
-  if (globalStore.games.length === 0) {
-     return NextResponse.json({ 
-       success: true, 
-       games: [], 
-       status: 'LOADING_INITIAL',
-       message: '최초 데이터 패치 중입니다. 5초 뒤 새로고침 해주세요.' 
-     });
+  // 첫 번째 liveWorker 실행 전 → 로딩 화면
+  if (!store.initialized) {
+    return NextResponse.json({
+      success: true,
+      games: [],
+      status: 'LOADING_INITIAL',
+      message: '데이터를 처음 불러오는 중입니다. 잠시 후 새로고침 해주세요.',
+    });
   }
-
-  return NextResponse.json({ 
-    success: true, 
-    games: globalStore.games, 
-    lastUpdated: globalStore.lastUpdated,
-    status: 'READY'
+  return NextResponse.json({
+    success: true,
+    games: store.games,
+    lastUpdated: store.lastUpdated,
+    status: 'READY',
   });
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -28,9 +29,15 @@ export default function RootLayout({
       lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="min-h-screen bg-[#060b18] text-slate-100">
-        <Navbar />
-        <main>{children}</main>
+      <head>
+        {/* 라이트모드 깜빡임 방지 */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('betman-theme')==='light')document.documentElement.classList.add('light')}catch(e){}` }} />
+      </head>
+      <body className="min-h-screen bg-[var(--bg-base)] text-slate-100">
+        <ThemeProvider>
+          <Navbar />
+          <main>{children}</main>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -23,12 +23,16 @@ export interface LiveMatch {
   leagueId: number;
   country: string;
   date: string;           // ISO 날짜
+  venue?: { name: string; city: string } | null;
+  referee?: string | null;
 }
 
 interface APIFootballResponse {
   fixture: {
     id: number;
     date: string;
+    venue?: { id: number; name: string; city: string } | null;
+    referee?: string | null;
     status: { short: string; elapsed: number | null };
   };
   league: { id: number; name: string; country: string };
@@ -76,36 +80,50 @@ function toMatch(item: APIFootballResponse): LiveMatch {
     leagueId: item.league.id,
     country: item.league.country,
     date: item.fixture.date,
+    venue: item.fixture.venue ? { name: item.fixture.venue.name, city: item.fixture.venue.city } : null,
+    referee: item.fixture.referee ?? null,
   };
 }
 
+/** YYYY-MM-DD 포맷 헬퍼 (KST 기준) — en-CA로 플랫폼 무관하게 안정적 포맷 */
+function toKSTDateStr(offsetDays: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  // en-CA 로케일은 OS/언어 설정과 무관하게 항상 "YYYY-MM-DD" 형식 반환
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(d);
+}
+
 /**
- * 오늘 날짜 기준 전체 경기 목록 (한국 시간)
- * - 하루 1~2번 호출로 충분 (캐싱 권장)
+ * 여러 날짜 병렬 조회 (무료 플랜은 date= 단일날짜만 지원)
+ * - 기본: 어제(-1) ~ 6일 후(+6) = 8일치, 8 req/호출
+ * - 6시간마다 갱신 → 32 req/day
  */
-export async function fetchTodayFixtures(): Promise<LiveMatch[]> {
+export async function fetchTodayFixtures(pastDays = 1, futureDays = 6): Promise<LiveMatch[]> {
   if (!process.env.API_FOOTBALL_KEY) {
     console.warn('[LiveScore] API_FOOTBALL_KEY 없음 → 빈 배열 반환');
     return [];
   }
 
   try {
-    // 한국 시간 기준 오늘 날짜
-    const today = new Date().toLocaleDateString('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).replace(/\. /g, '-').replace('.', ''); // YYYY-MM-DD 형식
-
-    console.log(`[LiveScore] 오늘 경기 조회: ${today} (Asia/Seoul)`);
-
-    const data: APIFootballResponse[] = await apiFetch(
-      `/fixtures?date=${today}&timezone=Asia%2FSeoul`
+    const offsets = Array.from({ length: pastDays + futureDays + 1 }, (_, i) => i - pastDays);
+    const results = await Promise.all(
+      offsets.map(async (offset) => {
+        const date = toKSTDateStr(offset);
+        try {
+          const data: APIFootballResponse[] = await apiFetch(`/fixtures?date=${date}&timezone=Asia%2FSeoul`);
+          return data.map(toMatch);
+        } catch {
+          return [] as LiveMatch[];
+        }
+      })
     );
 
-    console.log(`[LiveScore] 오늘 경기 수: ${data.length}`);
-    return data.map(toMatch);
+    const all = results.flat();
+    console.log(`[LiveScore] ${offsets.length}일치 조회 완료: ${all.length}경기`);
+    return all;
 
   } catch (err: any) {
     console.error('[LiveScore] fetchTodayFixtures 실패:', err.message);
