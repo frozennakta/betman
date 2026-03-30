@@ -3,14 +3,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, LayoutGrid, Layers, BarChart3, Menu, X, ShieldCheck } from 'lucide-react';
+import { Home, LayoutGrid, Layers, BarChart3, Menu, X, ShieldCheck, Trophy, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 
 const NavItems = [
   { href: '/', label: '홈', icon: Home, color: 'text-indigo-400' },
   { href: '/proto', label: '프로토', icon: LayoutGrid, color: 'text-emerald-400' },
   { href: '/toto', label: '토토', icon: Layers, color: 'text-blue-400' },
-  { href: '/records', label: '경기결과', icon: BarChart3, color: 'text-amber-400' }, // 👈 기록실 -> 경기결과 변경
+  { href: '/records', label: '경기결과', icon: BarChart3, color: 'text-amber-400' },
+  { href: '/standings', label: '순위표', icon: Trophy, color: 'text-yellow-400' },
+  { href: '/bet-tracker', label: '베팅기록', icon: BookOpen, color: 'text-purple-400' },
 ];
 
 export default function Navbar() {

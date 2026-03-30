@@ -6,11 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Flame, Zap, RefreshCw, Search,
   Calendar, ChevronUp, ChevronDown, ArrowUpDown, X, Sun, Moon,
-  Bell, BellOff, Star, ChevronLeft, ChevronRight,
+  Bell, BellOff, Star, ChevronLeft, ChevronRight, LayoutList, LayoutGrid,
 } from 'lucide-react';
 import MatchCard, { useFavorites } from '@/components/MatchCard';
 import OddsCalculator from '@/components/OddsCalculator';
 import { useTheme } from '@/context/ThemeContext';
+import { countryFlag } from '@/components/AnalysisTabs';
 
 type SortKey = 'time' | 'league' | 'country';
 
@@ -61,6 +62,22 @@ export default function HomePage() {
   const [countdown, setCountdown] = useState(20);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [showJumpLive, setShowJumpLive] = useState(false);
+
+  // ── 컴팩트 모드 ───────────────────────────────────────────────────────────
+  const [compact, setCompact] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    try { return localStorage.getItem('betman-compact') === 'true'; } catch { return false; }
+  });
+  const toggleCompact = useCallback(() => {
+    setCompact(prev => {
+      const next = !prev;
+      try { localStorage.setItem('betman-compact', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  // ── 국가/리그 필터 ────────────────────────────────────────────────────────
+  const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
 
   // ── 즐겨찾기 ─────────────────────────────────────────────────────────────
   const { favorites, toggle: toggleFav, isFav } = useFavorites();
@@ -168,10 +185,25 @@ export default function HomePage() {
   }, []);
 
   // ── 파생 데이터 ───────────────────────────────────────────────────────────
-  const popularLeagues = useMemo(() => {
-    const counts = new Map<string, number>();
-    games.forEach(g => counts.set(g.league, (counts.get(g.league) ?? 0) + 1));
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([l]) => l);
+  // ── 국가별 그룹 (필터 패널용) ─────────────────────────────────────────────
+  const countryGroups = useMemo(() => {
+    const map = new Map<string, { count: number; leagues: Map<string, number> }>();
+    games.forEach(g => {
+      if (!map.has(g.country)) map.set(g.country, { count: 0, leagues: new Map() });
+      const entry = map.get(g.country)!;
+      entry.count++;
+      entry.leagues.set(g.league, (entry.leagues.get(g.league) ?? 0) + 1);
+    });
+    return [...map.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .map(([country, { count, leagues }]) => ({
+        country,
+        flag: countryFlag(country),
+        count,
+        leagues: [...leagues.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([name, cnt]) => ({ name, count: cnt })),
+      }));
   }, [games]);
 
   const LIVE_STATUS = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
@@ -298,6 +330,19 @@ export default function HomePage() {
                   {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
                   <span className="text-[11px] font-black">{isLight ? 'DARK' : 'LIGHT'}</span>
                 </button>
+                {/* 컴팩트 모드 토글 */}
+                <button
+                  onClick={toggleCompact}
+                  title={compact ? '일반 모드' : '컴팩트 모드'}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
+                    compact
+                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30'
+                      : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                  }`}
+                >
+                  {compact ? <LayoutList className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
+                  <span className="text-[11px] font-black">{compact ? 'COMPACT' : 'NORMAL'}</span>
+                </button>
               </div>
 
               {/* 검색창 */}
@@ -369,32 +414,73 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* 리그 빠른 필터 */}
-          {popularLeagues.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                onClick={() => setLeagueFilter('')}
-                className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
-                  leagueFilter === ''
-                    ? 'bg-indigo-500 border-indigo-500 text-white'
-                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
-                }`}
-              >
-                전체 {games.length}
-              </button>
-              {popularLeagues.map(league => (
+          {/* 국가 → 리그 2단계 필터 */}
+          {countryGroups.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {/* 국가 버튼 열 */}
+              <div className="flex flex-wrap gap-1.5">
                 <button
-                  key={league}
-                  onClick={() => setLeagueFilter(leagueFilter === league ? '' : league)}
-                  className={`px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border truncate max-w-[150px] ${
-                    leagueFilter === league
+                  onClick={() => { setLeagueFilter(''); setExpandedCountry(null); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
+                    leagueFilter === '' && expandedCountry === null
                       ? 'bg-indigo-500 border-indigo-500 text-white'
                       : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
                   }`}
                 >
-                  {league} <span className="opacity-60">{games.filter(g => g.league === league).length}</span>
+                  전체 <span className="opacity-60">{games.length}</span>
                 </button>
-              ))}
+                {countryGroups.map(cg => (
+                  <button
+                    key={cg.country}
+                    onClick={() => setExpandedCountry(expandedCountry === cg.country ? null : cg.country)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
+                      expandedCountry === cg.country
+                        ? 'bg-white/10 border-white/20 text-white'
+                        : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                    }`}
+                  >
+                    {cg.flag && <span>{cg.flag}</span>}
+                    <span className="truncate max-w-[100px]">{cg.country}</span>
+                    <span className="opacity-50">{cg.count}</span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedCountry === cg.country ? 'rotate-180' : ''}`} />
+                  </button>
+                ))}
+              </div>
+
+              {/* 리그 서브 패널 (애니메이션) */}
+              <AnimatePresence initial={false}>
+                {expandedCountry !== null && (() => {
+                  const cg = countryGroups.find(c => c.country === expandedCountry);
+                  if (!cg) return null;
+                  return (
+                    <motion.div
+                      key={expandedCountry}
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2, ease: 'easeInOut' }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex flex-wrap gap-1.5 pl-2 pt-1 pb-1 border-l-2 border-indigo-500/30">
+                        {cg.leagues.map(lg => (
+                          <button
+                            key={lg.name}
+                            onClick={() => setLeagueFilter(leagueFilter === lg.name ? '' : lg.name)}
+                            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black transition-all border ${
+                              leagueFilter === lg.name
+                                ? 'bg-indigo-500 border-indigo-500 text-white'
+                                : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                            }`}
+                          >
+                            <span className="truncate max-w-[160px]">{lg.name}</span>
+                            <span className="opacity-50">{lg.count}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </motion.div>
+                  );
+                })()}
+              </AnimatePresence>
             </div>
           )}
         </div>
@@ -424,6 +510,7 @@ export default function HomePage() {
                       game={g}
                       isFavorite={isFav(g.id)}
                       onToggleFav={toggleFav}
+                      compact={compact}
                     />
                   ))}
                 </div>
@@ -453,6 +540,7 @@ export default function HomePage() {
                         game={game}
                         isFavorite={isFav(game.id)}
                         onToggleFav={toggleFav}
+                        compact={compact}
                       />
                     ))}
                   </div>
@@ -525,6 +613,7 @@ export default function HomePage() {
                                       game={g}
                                       isFavorite={isFav(g.id)}
                                       onToggleFav={toggleFav}
+                                      compact={compact}
                                     />
                                   ))}
                                 </div>
@@ -596,6 +685,7 @@ export default function HomePage() {
                                       game={g}
                                       isFavorite={isFav(g.id)}
                                       onToggleFav={toggleFav}
+                                      compact={compact}
                                     />
                                   ))}
                                 </div>

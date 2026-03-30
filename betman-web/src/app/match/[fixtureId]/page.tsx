@@ -5,10 +5,10 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2, ArrowLeft, Star } from 'lucide-react';
 import {
   countryFlag, STATUS_LABEL,
-  AnalysisTab, InfoTab, EventsTab, StatsTab, LineupTab, PoissonTab, MemoTab,
+  AnalysisTab, InfoTab, EventsTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab,
 } from '@/components/AnalysisTabs';
 
-const TABS = ['분석', '정보', '이벤트', '스탯', '라인업', '예측', '메모'] as const;
+const TABS = ['분석', '예측', '라인업', '부상', '스탯', '이벤트', '정보', '메모'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -202,11 +202,12 @@ export default function MatchPage() {
           ) : analysis ? (
             <>
               {tab === '분석'   && <AnalysisTab  analysis={analysis} game={game} />}
-              {tab === '정보'   && <InfoTab      analysis={analysis} game={game} />}
-              {tab === '이벤트' && <EventsTab    events={analysis.events ?? []} />}
-              {tab === '스탯'   && <StatsTab     statistics={analysis.statistics ?? []} />}
-              {tab === '라인업' && <LineupTab    lineups={analysis.lineups ?? []} />}
               {tab === '예측'   && <PoissonTab   analysis={analysis} game={game} />}
+              {tab === '라인업' && <LineupTab    lineups={analysis.lineups ?? []} />}
+              {tab === '부상'   && <InjuriesTab  injuries={analysis.injuries ?? []} game={game} />}
+              {tab === '스탯'   && <StatsTab     statistics={analysis.statistics ?? []} />}
+              {tab === '이벤트' && <EventsTab    events={analysis.events ?? []} />}
+              {tab === '정보'   && <InfoTab      analysis={analysis} game={game} />}
               {tab === '메모'   && <MemoTab      fixtureId={fixtureId} />}
             </>
           ) : (

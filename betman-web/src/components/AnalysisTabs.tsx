@@ -241,13 +241,110 @@ export function StatsTab({ statistics }: { statistics: any[] }) {
 }
 
 // ── 탭: 라인업 ────────────────────────────────────────────────────────────────
+const POS_COLOR: Record<string, string> = {
+  G: 'bg-yellow-500 text-black',
+  D: 'bg-blue-500 text-white',
+  M: 'bg-emerald-500 text-white',
+  F: 'bg-red-500 text-white',
+};
+const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
+
+function PitchView({ lineup }: { lineup: any }) {
+  const hasGrid = (lineup.startXI ?? []).some((p: any) => p.grid);
+  if (!hasGrid || !lineup.formation) return null;
+
+  // formation e.g. "4-3-3" → parse max row number
+  const formRows = lineup.formation.split('-').map(Number);
+  // rows: 1=GK, then each formation segment adds a row
+  const maxRow = formRows.length + 1; // +1 for GK row
+
+  // group players by row
+  const byRow = new Map<number, any[]>();
+  for (const p of (lineup.startXI ?? [])) {
+    if (!p.grid) continue;
+    const [row] = p.grid.split(':').map(Number);
+    if (!byRow.has(row)) byRow.set(row, []);
+    byRow.get(row)!.push(p);
+  }
+
+  const posColor = (pos: string) => POS_COLOR[pos] ?? 'bg-slate-500 text-white';
+
+  return (
+    <div
+      className="relative w-full rounded-2xl overflow-hidden border border-white/10"
+      style={{ background: 'linear-gradient(180deg, #14532d 0%, #166534 50%, #14532d 100%)', aspectRatio: '2/3' }}
+    >
+      {/* pitch lines */}
+      {/* center line */}
+      <div className="absolute left-0 right-0 border-t border-white/20" style={{ top: '50%' }} />
+      {/* center circle */}
+      <div className="absolute" style={{
+        top: '50%', left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: '28%', aspectRatio: '1',
+        borderRadius: '50%',
+        border: '1px solid rgba(255,255,255,0.2)',
+      }} />
+      {/* penalty box top */}
+      <div className="absolute border border-white/20" style={{ top: 0, left: '25%', right: '25%', height: '14%' }} />
+      {/* penalty box bottom */}
+      <div className="absolute border border-white/20" style={{ bottom: 0, left: '25%', right: '25%', height: '14%' }} />
+
+      {/* players */}
+      {[...byRow.entries()].map(([row, players]) => {
+        const topPct = ((row - 0.5) / maxRow) * 100;
+        return players.map((p, ci) => {
+          const leftPct = ((ci + 1) / (players.length + 1)) * 100;
+          return (
+            <div
+              key={p.number}
+              className="absolute flex flex-col items-center"
+              style={{
+                top: `${topPct}%`,
+                left: `${leftPct}%`,
+                transform: 'translate(-50%, -50%)',
+                width: '14%',
+              }}
+            >
+              <div className={`flex items-center justify-center rounded-full text-[9px] font-black w-6 h-6 shrink-0 shadow-lg ${posColor(p.pos)}`}>
+                {p.number}
+              </div>
+              <span className="text-[7px] font-bold text-white text-center leading-tight mt-0.5 drop-shadow-md max-w-full truncate px-0.5">
+                {p.name?.split(' ').slice(-1)[0]}
+              </span>
+            </div>
+          );
+        });
+      })}
+    </div>
+  );
+}
+
 export function LineupTab({ lineups }: { lineups: any[] }) {
   if (!lineups || lineups.length === 0) {
     return <div className="py-12 text-center text-slate-600 text-sm font-bold">라인업 미발표</div>;
   }
-  const POS: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
+  const hasVisual = lineups.some(l => l.formation && (l.startXI ?? []).some((p: any) => p.grid));
   return (
     <div className="space-y-6">
+      {/* 시각적 피치 (데이터 있을 때) */}
+      {hasVisual && (
+        <div className="grid grid-cols-2 gap-3">
+          {lineups.slice(0, 2).map((l) => (
+            <div key={l.teamId}>
+              <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center truncate">{l.team}</div>
+              <PitchView lineup={l} />
+              {l.formation && (
+                <div className="text-center mt-1">
+                  <span className="text-[9px] font-black text-indigo-400">{l.formation}</span>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 상세 리스트 */}
       {lineups.map((l) => (
         <div key={l.teamId} className="bg-black/20 rounded-2xl p-4 border border-white/5">
           <div className="flex items-center justify-between mb-3">
@@ -272,7 +369,7 @@ export function LineupTab({ lineups }: { lineups: any[] }) {
                     p.pos === 'D' ? 'text-blue-400 bg-blue-500/10' :
                     p.pos === 'M' ? 'text-emerald-400 bg-emerald-500/10' :
                     'text-red-400 bg-red-500/10'
-                  }`}>{POS[p.pos] ?? p.pos}</span>
+                  }`}>{POS_LABEL[p.pos] ?? p.pos}</span>
                   <span className="text-xs font-bold text-white truncate">{p.name}</span>
                 </div>
               ))}
@@ -601,6 +698,59 @@ export function PoissonTab({ analysis, game }: { analysis: any; game: any }) {
         </div>
       </div>
       <div className="text-[9px] text-slate-700 text-center">포아송 분포 기반 예측 · 참고용</div>
+    </div>
+  );
+}
+
+// ── 탭: 부상/결장 ─────────────────────────────────────────────────────────────
+export function InjuriesTab({ injuries, game }: { injuries: any[]; game: any }) {
+  if (!injuries || injuries.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-600 text-sm font-bold">
+        부상/결장 정보 없음
+      </div>
+    );
+  }
+
+  // 팀별 그룹
+  const groups = new Map<string, { teamId: number; players: any[] }>();
+  for (const inj of injuries) {
+    if (!inj.team) continue;
+    if (!groups.has(inj.team)) groups.set(inj.team, { teamId: inj.teamId, players: [] });
+    groups.get(inj.team)!.players.push(inj);
+  }
+
+  const typeBadge = (type: string | null) => {
+    if (!type) return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+    const t = type.toLowerCase();
+    if (t.includes('miss') || t.includes('out')) return 'bg-red-500/20 text-red-400 border-red-500/30';
+    if (t.includes('question')) return 'bg-orange-500/20 text-orange-400 border-orange-500/30';
+    if (t.includes('doubt')) return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+    return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
+  };
+
+  return (
+    <div className="space-y-4">
+      {[...groups.entries()].map(([teamName, { players }]) => (
+        <div key={teamName} className="bg-black/20 rounded-2xl p-4 border border-white/5">
+          <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">{teamName}</div>
+          <div className="space-y-2">
+            {players.map((inj, i) => (
+              <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2">
+                <span className="text-xs font-bold text-white flex-1 truncate">{inj.player ?? '–'}</span>
+                {inj.type && (
+                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${typeBadge(inj.type)}`}>
+                    {inj.type}
+                  </span>
+                )}
+                {inj.reason && (
+                  <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{inj.reason}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

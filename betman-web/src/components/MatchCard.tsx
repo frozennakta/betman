@@ -30,6 +30,7 @@ interface MatchCardProps {
   game: any;
   isFavorite?: boolean;
   onToggleFav?: (id: string) => void;
+  compact?: boolean;
 }
 
 // ── 라이브 분 표기 ────────────────────────────────────────────────────────────
@@ -46,7 +47,7 @@ function useLiveMinute(game: any): string {
 
 export { useFavorites };
 
-export default function MatchCard({ game, isFavorite, onToggleFav }: MatchCardProps) {
+export default function MatchCard({ game, isFavorite, onToggleFav, compact = false }: MatchCardProps) {
   const isLive     = game.liveStatus !== 'PENDING' && game.liveStatus !== 'FT';
   const isFinished = game.liveStatus === 'FT';
   const isBig      = BIG_LEAGUES.has(game.league);
@@ -109,8 +110,8 @@ export default function MatchCard({ game, isFavorite, onToggleFav }: MatchCardPr
       {/* 빅리그 왼쪽 악센트 */}
       {isBig && <div className="absolute left-0 inset-y-0 w-0.5 bg-amber-400/50 rounded-l-2xl" />}
 
-      <div className="px-3.5 sm:px-4 pt-2.5 pb-2 flex flex-col gap-1.5">
-        {/* 상단: 시간 + 리그 배지 */}
+      <div className={`flex flex-col gap-1.5 ${compact ? 'px-2.5 pt-1.5 pb-1' : 'px-3.5 sm:px-4 pt-2.5 pb-2'}`}>
+        {/* 상단: 시간 + 리그 배지 (컴팩트 모드에서 리그 배지 숨김) */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <div className="flex items-center gap-1 bg-white/5 rounded border border-white/10 px-1.5 py-0.5 shrink-0">
             {isLive ? (
@@ -125,9 +126,11 @@ export default function MatchCard({ game, isFavorite, onToggleFav }: MatchCardPr
               </span>
             )}
           </div>
-          <span className="text-[9px] font-black text-slate-500 uppercase px-1.5 py-0.5 bg-white/5 rounded border border-white/5 truncate max-w-[200px]">
-            {flag ? `${flag} ` : ''}{isBig ? '★ ' : ''}{game.country} · {game.league}
-          </span>
+          {!compact && (
+            <span className="text-[9px] font-black text-slate-500 uppercase px-1.5 py-0.5 bg-white/5 rounded border border-white/5 truncate max-w-[200px]">
+              {flag ? `${flag} ` : ''}{isBig ? '★ ' : ''}{game.country} · {game.league}
+            </span>
+          )}
           {isLive && (
             <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 text-red-400 text-[9px] font-black rounded border border-red-500/20 shrink-0">
               <span className="w-1 h-1 rounded-full bg-red-500 animate-ping" />
@@ -146,9 +149,10 @@ export default function MatchCard({ game, isFavorite, onToggleFav }: MatchCardPr
           const hasScore = (isLive || isFinished) && game.homeScore !== null;
           const hWin = hasScore && game.homeScore > game.awayScore;
           const aWin = hasScore && game.awayScore > game.homeScore;
+          const nameClass = compact ? 'text-xs' : 'text-sm';
           return (
             <div className="flex items-center gap-2">
-              <span className={`flex-1 text-sm font-black text-right truncate ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'}`}>
+              <span className={`flex-1 ${nameClass} font-black text-right truncate ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'}`}>
                 {game.homeTeam}
               </span>
               <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-all ${
@@ -166,7 +170,7 @@ export default function MatchCard({ game, isFavorite, onToggleFav }: MatchCardPr
                   <span className="text-[10px] font-black text-slate-600 px-0.5">VS</span>
                 )}
               </div>
-              <span className={`flex-1 text-sm font-black truncate ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'}`}>
+              <span className={`flex-1 ${nameClass} font-black truncate ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'}`}>
                 {game.awayTeam}
               </span>
 
@@ -186,6 +190,21 @@ export default function MatchCard({ game, isFavorite, onToggleFav }: MatchCardPr
             </div>
           );
         })()}
+
+        {/* 배당률 행 (컴팩트 모드 숨김, 데이터 있을 때만) */}
+        {!compact && game.homeOdds != null && (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-indigo-400">
+              홈 {game.homeOdds}
+            </span>
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-slate-400">
+              무 {game.drawOdds}
+            </span>
+            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-orange-400">
+              원 {game.awayOdds}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 라이브 진행 바 */}

@@ -58,9 +58,11 @@ export async function GET(
       fetchMap.statistics = apiFetch(`/fixtures/statistics?fixture=${fixtureId}`);
       fetchMap.lineups    = apiFetch(`/fixtures/lineups?fixture=${fixtureId}`);
       fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
+      fetchMap.injuries   = apiFetch(`/injuries?fixture=${fixtureId}`);
     } else {
       // 예정 경기: prediction만
       fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
+      fetchMap.injuries   = apiFetch(`/injuries?fixture=${fixtureId}`);
     }
 
     const keys = Object.keys(fetchMap);
@@ -70,10 +72,11 @@ export async function GET(
       results[k] = settled[i].status === 'fulfilled' ? settled[i].value : [];
     });
 
-    const pred  = results.predictions ?? [];
-    const evts  = results.events      ?? [];
-    const stats = results.statistics  ?? [];
-    const lnps  = results.lineups     ?? [];
+    const pred    = results.predictions ?? [];
+    const evts    = results.events      ?? [];
+    const stats   = results.statistics  ?? [];
+    const lnps    = results.lineups     ?? [];
+    const injRaw  = results.injuries    ?? [];
 
     const p = (pred[0] ?? null) as any;
 
@@ -166,6 +169,14 @@ export async function GET(
     const season = p?.league?.season ?? null;
     const round  = p?.league?.round  ?? null;
 
+    const injuryList = injRaw.map((inj: any) => ({
+      player: inj.player?.name ?? null,
+      team:   inj.team?.name   ?? null,
+      teamId: inj.team?.id     ?? null,
+      type:   inj.player?.type   ?? null,
+      reason: inj.player?.reason ?? null,
+    }));
+
     function normalizeRecent(fixtures: any[], teamId: number | null) {
       return fixtures
         .sort((a: any, b: any) => new Date(b.fixture?.date).getTime() - new Date(a.fixture?.date).getTime())
@@ -203,7 +214,7 @@ export async function GET(
       ? 24 * 60 * 60 * 1000  // 종료 경기: 24시간
       : 5 * 60 * 1000;        // 예정/진행: 5분
 
-    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, season, round, homeLast20, awayLast20 };
+    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20 };
     cache.set(fixtureId, { data, ts: Date.now(), ttl });
     return NextResponse.json({ success: true, ...data });
   } catch (err: any) {
