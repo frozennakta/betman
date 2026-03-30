@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
+import { readCache, writeCache } from '@/lib/apiCache';
 
 const API_BASE = 'https://v3.football.api-sports.io';
-const cache = new Map<string, { data: any; ts: number }>();
-const CACHE_TTL = 60 * 60 * 1000; // 1시간
+const memCache = new Map<string, { data: any; ts: number }>();
+const CACHE_TTL = 24 * 60 * 60 * 1000; // 24시간 (순위는 자주 안바뀜)
 
 async function apiFetch(path: string) {
   const apiKey = process.env.API_FOOTBALL_KEY;
@@ -26,9 +27,14 @@ export async function GET(req: Request) {
   const season = searchParams.get('season') ?? new Date().getFullYear().toString();
   const cacheKey = `${league}_${season}`;
 
-  const cached = cache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < CACHE_TTL) {
-    return NextResponse.json({ success: true, ...cached.data, cached: true });
+  const mem = memCache.get(cacheKey);
+  if (mem && Date.now() - mem.ts < CACHE_TTL) {
+    return NextResponse.json({ success: true, ...mem.data, cached: true });
+  }
+  const disk = readCache(`standings_${cacheKey}`);
+  if (disk) {
+    memCache.set(cacheKey, { data: disk.data, ts: disk.ts });
+    return NextResponse.json({ success: true, ...disk.data, cached: true });
   }
 
   try {
@@ -63,7 +69,8 @@ export async function GET(req: Request) {
     );
 
     const data = { leagueInfo, standings };
-    cache.set(cacheKey, { data, ts: Date.now() });
+    memCache.set(cacheKey, { data, ts: Date.now() });
+    writeCache(`standings_${cacheKey}`, data, CACHE_TTL);
     return NextResponse.json({ success: true, ...data });
   } catch (err: any) {
     console.error('[Standings] 오류:', err.message);

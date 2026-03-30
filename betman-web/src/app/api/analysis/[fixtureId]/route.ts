@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
+import { readCache, writeCache } from '@/lib/apiCache';
 
 const API_BASE = 'https://v3.football.api-sports.io';
 
-// 종료경기 24h, 진행/예정 5분 캐시
-const cache = new Map<string, { data: any; ts: number; ttl: number }>();
+// 인메모리 캐시 (파일 캐시와 병행: 서버 재시작 없을 때 빠른 응답용)
+const memCache = new Map<string, { data: any; ts: number; ttl: number }>();
 
 async function apiFetch(path: string) {
   const apiKey = process.env.API_FOOTBALL_KEY;
@@ -31,9 +32,16 @@ export async function GET(
 ) {
   const { fixtureId } = await params;
 
-  const cached = cache.get(fixtureId);
-  if (cached && Date.now() - cached.ts < cached.ttl) {
-    return NextResponse.json({ success: true, ...cached.data, cached: true });
+  // 1) 인메모리 캐시
+  const mem = memCache.get(fixtureId);
+  if (mem && Date.now() - mem.ts < mem.ttl) {
+    return NextResponse.json({ success: true, ...mem.data, cached: true });
+  }
+  // 2) 파일 캐시 (서버 재시작 후에도 유지)
+  const disk = readCache(`analysis_${fixtureId}`);
+  if (disk) {
+    memCache.set(fixtureId, disk);
+    return NextResponse.json({ success: true, ...disk.data, cached: true });
   }
 
   try {
@@ -215,7 +223,8 @@ export async function GET(
       : 5 * 60 * 1000;        // 예정/진행: 5분
 
     const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20 };
-    cache.set(fixtureId, { data, ts: Date.now(), ttl });
+    memCache.set(fixtureId, { data, ts: Date.now(), ttl });
+    writeCache(`analysis_${fixtureId}`, data, ttl);
     return NextResponse.json({ success: true, ...data });
   } catch (err: any) {
     console.error(`[Analysis] ${fixtureId} 오류:`, err.message);

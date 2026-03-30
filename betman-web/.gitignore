@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# api response cache (file-based, do not commit)
+/.api-cache/
+
 # production
 /build
 
