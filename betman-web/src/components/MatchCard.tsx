@@ -90,9 +90,11 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
     if (game.homeScore !== null && game.homeScore !== undefined) p.set('hs', String(game.homeScore));
     if (game.awayScore !== null && game.awayScore !== undefined) p.set('as', String(game.awayScore));
     if (game.elapsed   !== null && game.elapsed   !== undefined) p.set('elapsed', String(game.elapsed));
-    if (game.venue?.name)  p.set('venue',   game.venue.name);
-    if (game.venue?.city)  p.set('city',    game.venue.city);
-    if (game.referee)      p.set('referee', game.referee);
+    if (game.venue?.name)    p.set('venue',      game.venue.name);
+    if (game.venue?.city)    p.set('city',       game.venue.city);
+    if (game.referee)        p.set('referee',    game.referee);
+    if (game.homeTeamId)     p.set('homeTeamId', String(game.homeTeamId));
+    if (game.awayTeamId)     p.set('awayTeamId', String(game.awayTeamId));
     window.open(`/match/${fixtureId}?${p.toString()}`, '_blank');
   };
 

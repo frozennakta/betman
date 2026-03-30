@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2, ArrowLeft, Star } from 'lucide-react';
 import {
@@ -21,29 +21,66 @@ export default function MatchPage() {
   const [tab, setTab] = useState<TabKey>('분석');
   const [isFav, setIsFav] = useState(false);
 
-  // 쿼리파람에서 기본 게임 정보 복원
+  // 쿼리파람에서 기본 게임 정보 복원 (정적 필드)
   const game = {
     id: `fixture_${fixtureId}`,
-    homeTeam:   searchParams.get('home')    ?? '',
-    awayTeam:   searchParams.get('away')    ?? '',
-    league:     searchParams.get('league')  ?? '',
-    country:    searchParams.get('country') ?? '',
-    homeScore:  searchParams.get('hs') !== null ? Number(searchParams.get('hs')) : null,
-    awayScore:  searchParams.get('as') !== null ? Number(searchParams.get('as')) : null,
-    liveStatus: searchParams.get('status')  ?? 'PENDING',
-    matchTime:  searchParams.get('time')    ?? '',
-    date:       searchParams.get('date')    ?? '',
-    elapsed:    searchParams.get('elapsed') ? Number(searchParams.get('elapsed')) : null,
-    rawStatus:  searchParams.get('raw')     ?? '',
-    venue:      searchParams.get('venue')   ? { name: searchParams.get('venue'), city: searchParams.get('city') ?? '' } : null,
-    referee:    searchParams.get('referee') ?? '',
+    homeTeam:  searchParams.get('home')    ?? '',
+    awayTeam:  searchParams.get('away')    ?? '',
+    league:    searchParams.get('league')  ?? '',
+    country:   searchParams.get('country') ?? '',
+    matchTime: searchParams.get('time')    ?? '',
+    date:      searchParams.get('date')    ?? '',
+    venue:     searchParams.get('venue')   ? { name: searchParams.get('venue'), city: searchParams.get('city') ?? '' } : null,
+    referee:   searchParams.get('referee') ?? '',
   };
-
-  const isLive     = !['PENDING', 'FT'].includes(game.liveStatus);
-  const isFinished = game.liveStatus === 'FT';
-  const hWin = game.homeScore !== null && game.awayScore !== null && game.homeScore > game.awayScore;
-  const aWin = game.homeScore !== null && game.awayScore !== null && game.awayScore > game.homeScore;
   const flag = countryFlag(game.country);
+
+  // ── 라이브 업데이트용 state (20s 폴링으로 갱신) ──────────────────────────
+  const [live, setLive] = useState({
+    homeScore:  searchParams.get('hs') !== null ? Number(searchParams.get('hs')) : null as number | null,
+    awayScore:  searchParams.get('as') !== null ? Number(searchParams.get('as')) : null as number | null,
+    liveStatus: searchParams.get('status')  ?? 'PENDING',
+    rawStatus:  searchParams.get('raw')     ?? '',
+    elapsed:    searchParams.get('elapsed') ? Number(searchParams.get('elapsed')) : null as number | null,
+  });
+  const [scoreFlash, setScoreFlash] = useState(false);
+  const prevScore = useRef({ home: live.homeScore, away: live.awayScore });
+
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/games');
+        const data = await res.json();
+        if (!data.success || !data.games) return;
+        const match = data.games.find((g: any) => g.id === `fixture_${fixtureId}`);
+        if (!match) return;
+        // 골 감지 → 플래시
+        if (prevScore.current.home !== match.homeScore || prevScore.current.away !== match.awayScore) {
+          setScoreFlash(true);
+          setTimeout(() => setScoreFlash(false), 3000);
+        }
+        prevScore.current = { home: match.homeScore, away: match.awayScore };
+        setLive({
+          homeScore:  match.homeScore,
+          awayScore:  match.awayScore,
+          liveStatus: match.liveStatus,
+          rawStatus:  match.rawStatus,
+          elapsed:    match.elapsed,
+        });
+      } catch {}
+    };
+    poll();
+    const interval = setInterval(poll, 20000);
+    return () => clearInterval(interval);
+  }, [fixtureId]);
+
+  const isLive     = !['PENDING', 'FT'].includes(live.liveStatus);
+  const isFinished = live.liveStatus === 'FT';
+  const hWin = live.homeScore !== null && live.awayScore !== null && live.homeScore > live.awayScore;
+  const aWin = live.homeScore !== null && live.awayScore !== null && live.awayScore > live.homeScore;
+
+  // 탭 콘텐츠용 game 객체 (정적 + 라이브 병합)
+  const fullGame = { ...game, ...live };
 
   // 즐겨찾기
   useEffect(() => {
@@ -73,7 +110,14 @@ export default function MatchPage() {
 
   // 분석 데이터 fetch
   useEffect(() => {
-    fetch(`/api/analysis/${fixtureId}`)
+    const homeTeamId = searchParams.get('homeTeamId');
+    const awayTeamId = searchParams.get('awayTeamId');
+    const rawStatus  = searchParams.get('raw') ?? 'NS';
+    const qs = new URLSearchParams();
+    if (homeTeamId) qs.set('homeTeamId', homeTeamId);
+    if (awayTeamId) qs.set('awayTeamId', awayTeamId);
+    qs.set('status', rawStatus);
+    fetch(`/api/analysis/${fixtureId}?${qs.toString()}`)
       .then(r => r.json())
       .then(d => { if (d.success) setAnalysis(d); })
       .catch(() => {})
@@ -130,11 +174,11 @@ export default function MatchPage() {
             </div>
 
             <div className="shrink-0 text-center">
-              {(isLive || isFinished) && game.homeScore !== null ? (
-                <div className="flex items-center gap-2 bg-black/40 rounded-2xl px-4 py-2 border border-white/10">
-                  <span className={`text-3xl font-black tabular-nums ${hWin ? 'text-white' : 'text-slate-500'}`}>{game.homeScore}</span>
+              {(isLive || isFinished) && live.homeScore !== null ? (
+                <div className={`flex items-center gap-2 bg-black/40 rounded-2xl px-4 py-2 border transition-colors duration-300 ${scoreFlash ? 'border-red-500/50 bg-red-500/5' : 'border-white/10'}`}>
+                  <span className={`text-3xl font-black tabular-nums ${hWin ? 'text-white' : 'text-slate-500'}`}>{live.homeScore}</span>
                   <span className="text-slate-600 font-black text-xl">:</span>
-                  <span className={`text-3xl font-black tabular-nums ${aWin ? 'text-white' : 'text-slate-500'}`}>{game.awayScore}</span>
+                  <span className={`text-3xl font-black tabular-nums ${aWin ? 'text-white' : 'text-slate-500'}`}>{live.awayScore}</span>
                 </div>
               ) : (
                 <div className="bg-white/5 rounded-2xl px-5 py-2 border border-white/5">
@@ -157,8 +201,8 @@ export default function MatchPage() {
             {isLive && (
               <span className="flex items-center gap-1.5 text-[10px] font-black text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
-                {STATUS_LABEL[game.liveStatus] ?? game.liveStatus}
-                {game.elapsed ? ` · ${game.elapsed}'` : ''}
+                {STATUS_LABEL[live.liveStatus] ?? live.liveStatus}
+                {live.elapsed ? ` · ${live.elapsed}'` : ''}
               </span>
             )}
             {isFinished && (
@@ -201,13 +245,13 @@ export default function MatchPage() {
             </div>
           ) : analysis ? (
             <>
-              {tab === '분석'   && <AnalysisTab  analysis={analysis} game={game} />}
-              {tab === '예측'   && <PoissonTab   analysis={analysis} game={game} />}
+              {tab === '분석'   && <AnalysisTab  analysis={analysis} game={fullGame} />}
+              {tab === '예측'   && <PoissonTab   analysis={analysis} game={fullGame} />}
               {tab === '라인업' && <LineupTab    lineups={analysis.lineups ?? []} />}
-              {tab === '부상'   && <InjuriesTab  injuries={analysis.injuries ?? []} game={game} />}
+              {tab === '부상'   && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
               {tab === '스탯'   && <StatsTab     statistics={analysis.statistics ?? []} />}
               {tab === '이벤트' && <EventsTab    events={analysis.events ?? []} />}
-              {tab === '정보'   && <InfoTab      analysis={analysis} game={game} />}
+              {tab === '정보'   && <InfoTab      analysis={analysis} game={fullGame} />}
               {tab === '메모'   && <MemoTab      fixtureId={fixtureId} />}
             </>
           ) : (

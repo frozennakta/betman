@@ -15,6 +15,8 @@ export interface LiveMatch {
   fixtureId: number;
   homeTeam: string;       // API-Football 영어명
   awayTeam: string;
+  homeTeamId: number;
+  awayTeamId: number;
   status: string;         // NS | 1H | HT | 2H | FT | ET | PEN | AET | CANC
   homeScore: number;
   awayScore: number;
@@ -72,6 +74,8 @@ function toMatch(item: APIFootballResponse): LiveMatch {
     fixtureId: item.fixture.id,
     homeTeam: item.teams.home.name,
     awayTeam: item.teams.away.name,
+    homeTeamId: item.teams.home.id,
+    awayTeamId: item.teams.away.id,
     status: item.fixture.status.short,
     homeScore: item.goals.home ?? 0,
     awayScore: item.goals.away ?? 0,

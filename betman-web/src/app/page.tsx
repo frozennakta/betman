@@ -306,94 +306,69 @@ export default function HomePage() {
         <div className="absolute bottom-[-15%] right-[-10%] w-[50%] h-[50%] bg-purple-600/10 blur-[200px] rounded-full animate-pulse" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3">
 
-        {/* ── 헤더 ──────────────────────────────────────────────────────── */}
-        <div className="mb-8">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-            <div>
-              <div className="flex items-center space-x-2 mb-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-[10px] font-black text-emerald-500 tracking-widest uppercase">System Operational</span>
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter mb-2">실시간 데이터 레이더</h1>
-              <p className="text-slate-400 font-medium text-sm leading-relaxed">전세계 800+ 리그 실시간 스코어 · 분석 · 라인업</p>
+        {/* ── 헤더 (한 줄) ────────────────────────────────────────────────── */}
+        <div className="mb-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* 상태 dot */}
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+
+            {/* 검색창 */}
+            <div className="relative flex-1 min-w-[180px] max-w-xs group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder='팀, 리그, 국가 검색... ( / )'
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="w-full bg-white/5 border border-white/5 text-white text-xs font-medium pl-8 pr-8 py-2 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:text-slate-600"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => { setSearchTerm(''); setLeagueFilter(''); }}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-500 hover:text-white transition-colors"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
             </div>
 
-            <div className="flex flex-col gap-3 md:items-end">
-              {/* 상단 버튼 열 */}
-              <div className="flex items-center gap-2">
-                {/* 알림 버튼 */}
-                <button
-                  onClick={toggleNotif}
-                  title={notifEnabled ? '알림 끄기' : '경기 시작 알림 켜기'}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
-                    notifEnabled
-                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30'
-                      : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
-                  }`}
-                >
-                  {notifEnabled
-                    ? <Bell className="w-4 h-4" />
-                    : <BellOff className="w-4 h-4" />}
-                  <span className="text-[11px] font-black">{notifEnabled ? 'ON' : 'OFF'}</span>
-                </button>
-                {/* 다크/라이트 토글 */}
-                <button
-                  onClick={toggleTheme}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all text-slate-400 hover:text-white"
-                  title={isLight ? '다크 모드로 전환' : '라이트 모드로 전환'}
-                >
-                  {isLight ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                  <span className="text-[11px] font-black">{isLight ? 'DARK' : 'LIGHT'}</span>
-                </button>
-                {/* 컴팩트 모드 토글 */}
-                <button
-                  onClick={toggleCompact}
-                  title={compact ? '일반 모드' : '컴팩트 모드'}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border transition-all ${
-                    compact
-                      ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30'
-                      : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
-                  }`}
-                >
-                  {compact ? <LayoutList className="w-4 h-4" /> : <LayoutGrid className="w-4 h-4" />}
-                  <span className="text-[11px] font-black">{compact ? 'COMPACT' : 'NORMAL'}</span>
-                </button>
-              </div>
+            {/* 상태 바 */}
+            <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 shrink-0">
+              <span>총 <span className="text-white">{games.length}</span>경기</span>
+              <span className="text-slate-700">·</span>
+              <span>갱신 <span className="text-indigo-400">{lastUpdated || '--:--:--'}</span></span>
+              <span className="text-slate-700">·</span>
+              <span className="flex items-center gap-1">
+                <span className={`w-1.5 h-1.5 rounded-full ${countdown <= 5 ? 'bg-orange-400 animate-ping' : 'bg-slate-600'}`} />
+                <span className={countdown <= 5 ? 'text-orange-400' : ''}>{countdown}s</span>
+              </span>
+            </div>
 
-              {/* 검색창 */}
-              <div className="relative w-full md:w-80 group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-indigo-400 transition-colors" />
-                <input
-                  ref={searchRef}
-                  type="text"
-                  placeholder='팀, 리그, 국가 검색... ( / )'
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full bg-white/5 border border-white/5 text-white text-sm font-medium pl-10 pr-9 py-3 rounded-2xl focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all placeholder:text-slate-600"
-                />
-                {searchTerm && (
-                  <button
-                    onClick={() => { setSearchTerm(''); setLeagueFilter(''); }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-500 hover:text-white transition-colors"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* 상태 바 */}
-              <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
-                <span>총 <span className="text-white">{games.length}</span>경기</span>
-                <span className="text-slate-700">·</span>
-                <span>갱신 <span className="text-indigo-400">{lastUpdated || '--:--:--'}</span></span>
-                <span className="text-slate-700">·</span>
-                <span className="flex items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${countdown <= 5 ? 'bg-orange-400 animate-ping' : 'bg-slate-600'}`} />
-                  <span className={countdown <= 5 ? 'text-orange-400' : ''}>{countdown}s</span>
-                </span>
-              </div>
+            {/* 버튼들 */}
+            <div className="flex items-center gap-2 ml-auto shrink-0">
+              <button
+                onClick={toggleNotif}
+                title={notifEnabled ? '알림 끄기' : '경기 시작 알림 켜기'}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all ${
+                  notifEnabled
+                    ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30'
+                    : 'bg-white/5 border-white/5 text-slate-400 hover:text-white hover:border-white/10'
+                }`}
+              >
+                {notifEnabled ? <Bell className="w-3.5 h-3.5" /> : <BellOff className="w-3.5 h-3.5" />}
+                <span className="text-[10px] font-black">{notifEnabled ? 'ON' : 'OFF'}</span>
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all text-slate-400 hover:text-white"
+                title={isLight ? '다크 모드로 전환' : '라이트 모드로 전환'}
+              >
+                {isLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+                <span className="text-[10px] font-black">{isLight ? 'DARK' : 'LIGHT'}</span>
+              </button>
             </div>
           </div>
 

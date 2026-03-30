@@ -27,10 +27,14 @@ async function apiFetch(path: string) {
 }
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ fixtureId: string }> }
 ) {
   const { fixtureId } = await params;
+  const url = new URL(req.url);
+  const homeTeamIdParam = url.searchParams.get('homeTeamId');
+  const awayTeamIdParam = url.searchParams.get('awayTeamId');
+  const statusParam = url.searchParams.get('status') ?? 'NS';
 
   // 1) 인메모리 캐시
   const mem = memCache.get(fixtureId);
@@ -45,12 +49,19 @@ export async function GET(
   }
 
   try {
-    // Step 1: fixture 기본정보 (1 call) → 팀 ID + 경기 상태 파악
-    const fixtureRaw = await apiFetch(`/fixtures?id=${fixtureId}`);
-    const fi = fixtureRaw[0] ?? null;
-    const homeTeamId: number | null = fi?.teams?.home?.id ?? null;
-    const awayTeamId: number | null = fi?.teams?.away?.id ?? null;
-    const shortStatus: string = fi?.fixture?.status?.short ?? 'NS';
+    let homeTeamId: number | null = homeTeamIdParam ? Number(homeTeamIdParam) : null;
+    let awayTeamId: number | null = awayTeamIdParam ? Number(awayTeamIdParam) : null;
+    let shortStatus: string = statusParam;
+
+    // teamId가 없을 때만 fixture 기본정보 호출 (1 call 절약)
+    if (!homeTeamId || !awayTeamId) {
+      const fixtureRaw = await apiFetch(`/fixtures?id=${fixtureId}`);
+      const fi = fixtureRaw[0] ?? null;
+      homeTeamId = fi?.teams?.home?.id ?? null;
+      awayTeamId = fi?.teams?.away?.id ?? null;
+      shortStatus = fi?.fixture?.status?.short ?? 'NS';
+    }
+
     const isFinishedOrLive = !['NS', 'TBD', 'CANC', 'PST', 'ABD', 'AWD', 'WO'].includes(shortStatus);
 
     // Step 2: 상태에 따라 필요한 데이터만 병렬 호출
@@ -76,9 +87,18 @@ export async function GET(
     const keys = Object.keys(fetchMap);
     const settled = await Promise.allSettled(keys.map(k => fetchMap[k]));
     const results: Record<string, any[]> = {};
+    const debugInfo: Record<string, any> = {};
     keys.forEach((k, i) => {
-      results[k] = settled[i].status === 'fulfilled' ? settled[i].value : [];
+      const s = settled[i];
+      if (s.status === 'fulfilled') {
+        results[k] = s.value;
+        debugInfo[k] = { ok: true, count: Array.isArray(s.value) ? s.value.length : s.value };
+      } else {
+        results[k] = [];
+        debugInfo[k] = { ok: false, error: s.reason?.message ?? String(s.reason) };
+      }
     });
+    console.log(`[Analysis] ${fixtureId} homeId=${homeTeamId} awayId=${awayTeamId}`, JSON.stringify(debugInfo));
 
     const pred    = results.predictions ?? [];
     const evts    = results.events      ?? [];
@@ -225,7 +245,7 @@ export async function GET(
     const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20 };
     memCache.set(fixtureId, { data, ts: Date.now(), ttl });
     writeCache(`analysis_${fixtureId}`, data, ttl);
-    return NextResponse.json({ success: true, ...data });
+    return NextResponse.json({ success: true, ...data, _debug: debugInfo });
   } catch (err: any) {
     console.error(`[Analysis] ${fixtureId} 오류:`, err.message);
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
