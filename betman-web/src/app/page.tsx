@@ -76,8 +76,9 @@ export default function HomePage() {
     });
   }, []);
 
-  // ── 국가/리그 필터 ────────────────────────────────────────────────────────
+  // ── 국가/리그 필터 (기본 접힘) ───────────────────────────────────────────
   const [expandedCountry, setExpandedCountry] = useState<string | null>(null);
+  const [showCountryFilter, setShowCountryFilter] = useState(false);
 
   // ── 즐겨찾기 ─────────────────────────────────────────────────────────────
   const { favorites, toggle: toggleFav, isFav } = useFavorites();
@@ -216,31 +217,40 @@ export default function HomePage() {
   const LIVE_STATUS = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
   const byDate = (a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime();
 
-  // ── 날짜 필터링 + 검색/리그 필터 ─────────────────────────────────────────
-  const filteredGames = useMemo(() => {
+  // ── 검색/리그 필터만 (날짜 무관) — 라이브·예정용 ─────────────────────────
+  const textFilteredGames = useMemo(() => {
     const s = searchTerm.toLowerCase();
-    // Step 1: date offset filter
-    const target = new Date();
-    target.setDate(target.getDate() + dateOffset);
-    const targetStr = target.toDateString();
-
     return games.filter(g => {
-      const dateOk = new Date(g.date).toDateString() === targetStr;
       const textOk = !s ||
         g.homeTeam.toLowerCase().includes(s) ||
         g.awayTeam.toLowerCase().includes(s) ||
         g.league.toLowerCase().includes(s) ||
         g.country.toLowerCase().includes(s);
       const leagueOk = !leagueFilter || g.league === leagueFilter;
-      return dateOk && textOk && leagueOk;
+      return textOk && leagueOk;
     });
-  }, [games, searchTerm, leagueFilter, dateOffset]);
+  }, [games, searchTerm, leagueFilter]);
 
-  const liveGames     = useMemo(() => filteredGames.filter(g => LIVE_STATUS.has(g.rawStatus)).sort(byDate),  [filteredGames]);
+  // ── 날짜 + 검색/리그 필터 — 종료경기용 ──────────────────────────────────
+  const filteredGames = useMemo(() => {
+    const target = new Date();
+    target.setDate(target.getDate() + dateOffset);
+    const targetStr = target.toDateString();
+    return textFilteredGames.filter(g => new Date(g.date).toDateString() === targetStr);
+  }, [textFilteredGames, dateOffset]);
+
+  // 라이브: 날짜 무관
+  const liveGames = useMemo(() =>
+    textFilteredGames.filter(g => LIVE_STATUS.has(g.rawStatus)).sort(byDate),
+  [textFilteredGames]);
+
+  // 예정: 날짜 무관 — 오늘 이후 전체
   const upcomingGames = useMemo(() => {
     const now = new Date();
-    return filteredGames.filter(g => g.liveStatus === 'PENDING' && new Date(g.date) > now).sort(byDate);
-  }, [filteredGames]);
+    return textFilteredGames.filter(g => g.liveStatus === 'PENDING' && new Date(g.date) > now).sort(byDate);
+  }, [textFilteredGames]);
+
+  // 종료: 선택된 날짜만
   const finishedGames = useMemo(() => {
     const now = new Date();
     return filteredGames.filter(g => g.liveStatus === 'FT' || (g.liveStatus === 'PENDING' && new Date(g.date) <= now)).sort((a, b) => byDate(b, a));
@@ -387,111 +397,134 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* ── 날짜 네비게이션 (-1 ~ +6) ────────────────────────────────── */}
-          <div className="mt-5 flex items-center gap-2">
-            <button
-              onClick={() => setDateOffset(v => Math.max(v - 1, -1))}
-              disabled={dateOffset <= -1}
-              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
-              {([-1, 0, 1, 2, 3, 4, 5, 6] as const).map(offset => (
-                <button
-                  key={offset}
-                  onClick={() => setDateOffset(offset)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border whitespace-nowrap shrink-0 ${
-                    dateOffset === offset
-                      ? 'bg-indigo-500 border-indigo-500 text-white'
-                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
-                  }`}
-                >
-                  {offsetLabel(offset)}
-                  <span className={`text-[9px] ${dateOffset === offset ? 'text-indigo-200' : 'text-slate-600'}`}>
-                    {countForOffset(offset)}
-                  </span>
-                </button>
-              ))}
-            </div>
-            <button
-              onClick={() => setDateOffset(v => Math.min(v + 1, 6))}
-              disabled={dateOffset >= 6}
-              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* 국가 → 리그 2단계 필터 */}
-          {countryGroups.length > 0 && (
-            <div className="mt-3 space-y-2">
-              {/* 국가 버튼 열 */}
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  onClick={() => { setLeagueFilter(''); setExpandedCountry(null); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
-                    leagueFilter === '' && expandedCountry === null
-                      ? 'bg-indigo-500 border-indigo-500 text-white'
-                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
-                  }`}
-                >
-                  전체 <span className="opacity-60">{games.length}</span>
-                </button>
-                {countryGroups.map(cg => (
+          {/* ── 종료경기 날짜 네비 + 국가/리그 필터 토글 ──────────────────── */}
+          <div className="mt-4 space-y-2">
+            {/* 종료경기 날짜 선택 + 필터 버튼 한 줄 */}
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest shrink-0">종료</span>
+              <button
+                onClick={() => setDateOffset(v => Math.max(v - 1, -1))}
+                disabled={dateOffset <= -1}
+                className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-slate-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
+                {([-1, 0, 1, 2, 3, 4, 5, 6] as const).map(offset => (
                   <button
-                    key={cg.country}
-                    onClick={() => setExpandedCountry(expandedCountry === cg.country ? null : cg.country)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
-                      expandedCountry === cg.country
-                        ? 'bg-white/10 border-white/20 text-white'
+                    key={offset}
+                    onClick={() => setDateOffset(offset)}
+                    className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black transition-all border whitespace-nowrap shrink-0 ${
+                      dateOffset === offset
+                        ? 'bg-indigo-500 border-indigo-500 text-white'
                         : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
                     }`}
                   >
-                    {cg.flag && <span>{cg.flag}</span>}
-                    <span className="truncate max-w-[100px]">{cg.country}</span>
-                    <span className="opacity-50">{cg.count}</span>
-                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedCountry === cg.country ? 'rotate-180' : ''}`} />
+                    {offsetLabel(offset)}
+                    <span className={`text-[8px] ${dateOffset === offset ? 'text-indigo-200' : 'text-slate-600'}`}>
+                      {countForOffset(offset)}
+                    </span>
                   </button>
                 ))}
               </div>
-
-              {/* 리그 서브 패널 (애니메이션) */}
-              <AnimatePresence initial={false}>
-                {expandedCountry !== null && (() => {
-                  const cg = countryGroups.find(c => c.country === expandedCountry);
-                  if (!cg) return null;
-                  return (
-                    <motion.div
-                      key={expandedCountry}
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      transition={{ duration: 0.2, ease: 'easeInOut' }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex flex-wrap gap-1.5 pl-2 pt-1 pb-1 border-l-2 border-indigo-500/30">
-                        {cg.leagues.map(lg => (
-                          <button
-                            key={lg.name}
-                            onClick={() => setLeagueFilter(leagueFilter === lg.name ? '' : lg.name)}
-                            className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black transition-all border ${
-                              leagueFilter === lg.name
-                                ? 'bg-indigo-500 border-indigo-500 text-white'
-                                : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
-                            }`}
-                          >
-                            <span className="truncate max-w-[160px]">{lg.name}</span>
-                            <span className="opacity-50">{lg.count}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </motion.div>
-                  );
-                })()}
-              </AnimatePresence>
+              <button
+                onClick={() => setDateOffset(v => Math.min(v + 1, 6))}
+                disabled={dateOffset >= 6}
+                className="p-1.5 rounded-lg bg-white/5 border border-white/5 text-slate-500 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              {/* 국가 필터 토글 */}
+              <button
+                onClick={() => setShowCountryFilter(v => !v)}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black border transition-all shrink-0 ${
+                  showCountryFilter || leagueFilter
+                    ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400'
+                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                }`}
+              >
+                {leagueFilter ? '🔍' : '🌍'}
+                <ChevronDown className={`w-3 h-3 transition-transform ${showCountryFilter ? 'rotate-180' : ''}`} />
+              </button>
             </div>
-          )}
+
+            {/* 국가 → 리그 2단계 필터 (접힘/펼침) */}
+            <AnimatePresence initial={false}>
+              {showCountryFilter && countryGroups.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeInOut' }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-2 pt-1">
+                    <div className="flex flex-wrap gap-1.5">
+                      <button
+                        onClick={() => { setLeagueFilter(''); setExpandedCountry(null); }}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
+                          leagueFilter === '' && expandedCountry === null
+                            ? 'bg-indigo-500 border-indigo-500 text-white'
+                            : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                        }`}
+                      >
+                        전체 <span className="opacity-60">{games.length}</span>
+                      </button>
+                      {countryGroups.map(cg => (
+                        <button
+                          key={cg.country}
+                          onClick={() => setExpandedCountry(expandedCountry === cg.country ? null : cg.country)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
+                            expandedCountry === cg.country
+                              ? 'bg-white/10 border-white/20 text-white'
+                              : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                          }`}
+                        >
+                          {cg.flag && <span>{cg.flag}</span>}
+                          <span className="truncate max-w-[100px]">{cg.country}</span>
+                          <span className="opacity-50">{cg.count}</span>
+                          <ChevronDown className={`w-3 h-3 transition-transform ${expandedCountry === cg.country ? 'rotate-180' : ''}`} />
+                        </button>
+                      ))}
+                    </div>
+                    <AnimatePresence initial={false}>
+                      {expandedCountry !== null && (() => {
+                        const cg = countryGroups.find(c => c.country === expandedCountry);
+                        if (!cg) return null;
+                        return (
+                          <motion.div
+                            key={expandedCountry}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.15, ease: 'easeInOut' }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex flex-wrap gap-1.5 pl-2 pt-1 pb-1 border-l-2 border-indigo-500/30">
+                              {cg.leagues.map(lg => (
+                                <button
+                                  key={lg.name}
+                                  onClick={() => setLeagueFilter(leagueFilter === lg.name ? '' : lg.name)}
+                                  className={`flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-black transition-all border ${
+                                    leagueFilter === lg.name
+                                      ? 'bg-indigo-500 border-indigo-500 text-white'
+                                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                                  }`}
+                                >
+                                  <span className="truncate max-w-[160px]">{lg.name}</span>
+                                  <span className="opacity-50">{lg.count}</span>
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
+                        );
+                      })()}
+                    </AnimatePresence>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {loading && games.length === 0 ? (
