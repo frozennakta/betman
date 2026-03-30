@@ -82,10 +82,17 @@ export default function HomePage() {
   // ── 즐겨찾기 ─────────────────────────────────────────────────────────────
   const { favorites, toggle: toggleFav, isFav } = useFavorites();
 
-  // ── 날짜 필터 (0=오늘, -1=어제, 1=내일) ─────────────────────────────────
+  // ── 날짜 필터 (-1=어제 ~ +6=6일후) ──────────────────────────────────────
   const [dateOffset, setDateOffset] = useState(0);
-  const offsetLabel = (offset: number) =>
-    offset === -1 ? '어제' : offset === 0 ? '오늘' : '내일';
+  const offsetLabel = (offset: number) => {
+    if (offset === -1) return '어제';
+    if (offset === 0)  return '오늘';
+    if (offset === 1)  return '내일';
+    if (offset === 2)  return '모레';
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' });
+  };
 
   // ── 알림 ─────────────────────────────────────────────────────────────────
   const [notifEnabled, setNotifEnabled] = useState(() => {
@@ -380,35 +387,37 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* ── 날짜 네비게이션 ──────────────────────────────────────────── */}
+          {/* ── 날짜 네비게이션 (-1 ~ +6) ────────────────────────────────── */}
           <div className="mt-5 flex items-center gap-2">
             <button
               onClick={() => setDateOffset(v => Math.max(v - 1, -1))}
               disabled={dateOffset <= -1}
-              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            {([-1, 0, 1] as const).map(offset => (
-              <button
-                key={offset}
-                onClick={() => setDateOffset(offset)}
-                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
-                  dateOffset === offset
-                    ? 'bg-indigo-500 border-indigo-500 text-white'
-                    : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
-                }`}
-              >
-                {offsetLabel(offset)}
-                <span className={`text-[9px] ${dateOffset === offset ? 'text-indigo-200' : 'text-slate-600'}`}>
-                  {countForOffset(offset)}
-                </span>
-              </button>
-            ))}
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar flex-1">
+              {([-1, 0, 1, 2, 3, 4, 5, 6] as const).map(offset => (
+                <button
+                  key={offset}
+                  onClick={() => setDateOffset(offset)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[11px] font-black transition-all border whitespace-nowrap shrink-0 ${
+                    dateOffset === offset
+                      ? 'bg-indigo-500 border-indigo-500 text-white'
+                      : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                  }`}
+                >
+                  {offsetLabel(offset)}
+                  <span className={`text-[9px] ${dateOffset === offset ? 'text-indigo-200' : 'text-slate-600'}`}>
+                    {countForOffset(offset)}
+                  </span>
+                </button>
+              ))}
+            </div>
             <button
-              onClick={() => setDateOffset(v => Math.min(v + 1, 1))}
-              disabled={dateOffset >= 1}
-              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              onClick={() => setDateOffset(v => Math.min(v + 1, 6))}
+              disabled={dateOffset >= 6}
+              className="p-2 rounded-xl bg-white/5 border border-white/5 text-slate-500 hover:text-white hover:border-white/10 transition-all disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
