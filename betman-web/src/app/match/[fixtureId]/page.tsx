@@ -8,7 +8,7 @@ import {
   AnalysisTab, InfoTab, EventsTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab,
 } from '@/components/AnalysisTabs';
 
-const TABS = ['분석', '예측', '라인업', '부상', '스탯', '이벤트', '정보', '메모'] as const;
+const TABS = ['Analysis', 'Predict', 'Lineup', 'Injuries', 'Stats', 'Events', 'Info', 'Notes'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -18,7 +18,7 @@ export default function MatchPage() {
 
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>('분석');
+  const [tab, setTab] = useState<TabKey>('Analysis');
   const [isFav, setIsFav] = useState(false);
 
   // 쿼리파람에서 기본 게임 정보 복원 (정적 필드)
@@ -145,7 +145,7 @@ export default function MatchPage() {
           className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors mb-5 group"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          <span className="text-xs font-black">목록으로</span>
+          <span className="text-xs font-black">Back</span>
         </button>
 
         {/* 경기 헤더 카드 */}
@@ -158,19 +158,32 @@ export default function MatchPage() {
             <button
               onClick={toggleFav}
               className="p-2 rounded-xl bg-white/5 hover:bg-white/10 transition-colors"
-              title={isFav ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+              title={isFav ? 'Remove favorite' : 'Add to favorites'}
             >
               <Star className={`w-4 h-4 transition-colors ${isFav ? 'text-amber-400 fill-amber-400' : 'text-slate-600'}`} />
             </button>
           </div>
 
           {/* 팀 + 스코어 */}
+          {(() => {
+            // Count red cards per team from analysis events
+            const events = analysis?.events ?? [];
+            const homeReds = events.filter((e: any) => e.type === 'Card' && e.detail?.includes('Red') && e.team === game.homeTeam).length;
+            const awayReds = events.filter((e: any) => e.type === 'Card' && e.detail?.includes('Red') && e.team === game.awayTeam).length;
+            return (
           <div className="flex items-center justify-between gap-4 mb-4">
             <div className="flex-1 text-right">
-              <div className={`text-xl sm:text-2xl font-black ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'}`}>
-                {game.homeTeam}
+              <div className={`text-xl sm:text-2xl font-black ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'} flex items-center justify-end gap-1.5`}>
+                <span>{game.homeTeam}</span>
+                {homeReds > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    {Array.from({length: homeReds}).map((_, i) => (
+                      <span key={i} className="text-sm">🟥</span>
+                    ))}
+                  </span>
+                )}
               </div>
-              <div className="text-[10px] font-black text-slate-600 mt-0.5">홈</div>
+              <div className="text-[10px] font-black text-slate-600 mt-0.5">Home</div>
             </div>
 
             <div className="shrink-0 text-center">
@@ -183,18 +196,27 @@ export default function MatchPage() {
               ) : (
                 <div className="bg-white/5 rounded-2xl px-5 py-2 border border-white/5">
                   <div className="text-sm font-black text-indigo-300 tabular-nums">{game.matchTime}</div>
-                  <div className="text-[9px] font-black text-slate-600 mt-0.5">킥오프</div>
+                  <div className="text-[9px] font-black text-slate-600 mt-0.5">Kick-off</div>
                 </div>
               )}
             </div>
 
             <div className="flex-1">
-              <div className={`text-xl sm:text-2xl font-black ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'}`}>
-                {game.awayTeam}
+              <div className={`text-xl sm:text-2xl font-black ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'} flex items-center gap-1.5`}>
+                {awayReds > 0 && (
+                  <span className="inline-flex items-center gap-0.5">
+                    {Array.from({length: awayReds}).map((_, i) => (
+                      <span key={i} className="text-sm">🟥</span>
+                    ))}
+                  </span>
+                )}
+                <span>{game.awayTeam}</span>
               </div>
-              <div className="text-[10px] font-black text-slate-600 mt-0.5">원정</div>
+              <div className="text-[10px] font-black text-slate-600 mt-0.5">Away</div>
             </div>
           </div>
+            );
+          })()}
 
           {/* 상태 배지 */}
           <div className="flex justify-center">
@@ -206,11 +228,11 @@ export default function MatchPage() {
               </span>
             )}
             {isFinished && (
-              <span className="text-[10px] font-black text-slate-500 bg-white/5 px-3 py-1 rounded-full">종료</span>
+              <span className="text-[10px] font-black text-slate-500 bg-white/5 px-3 py-1 rounded-full">Full Time</span>
             )}
             {!isLive && !isFinished && (
               <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-full border border-indigo-500/20">
-                예정 · {game.matchTime}
+                Scheduled · {game.matchTime}
               </span>
             )}
           </div>
@@ -229,7 +251,7 @@ export default function MatchPage() {
               }`}
             >
               {t}
-              {t === '메모' && hasNote && (
+              {t === 'Notes' && hasNote && (
                 <span className="absolute top-1 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
               )}
             </button>
@@ -241,23 +263,23 @@ export default function MatchPage() {
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
               <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm font-black">분석 데이터 로딩 중...</span>
+              <span className="text-sm font-black">Loading analysis data...</span>
             </div>
           ) : analysis ? (
             <>
-              {tab === '분석'   && <AnalysisTab  analysis={analysis} game={fullGame} />}
-              {tab === '예측'   && <PoissonTab   analysis={analysis} game={fullGame} />}
-              {tab === '라인업' && <LineupTab    lineups={analysis.lineups ?? []} />}
-              {tab === '부상'   && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
-              {tab === '스탯'   && <StatsTab     statistics={analysis.statistics ?? []} />}
-              {tab === '이벤트' && <EventsTab    events={analysis.events ?? []} />}
-              {tab === '정보'   && <InfoTab      analysis={analysis} game={fullGame} />}
-              {tab === '메모'   && <MemoTab      fixtureId={fixtureId} />}
+              {tab === 'Analysis'   && <AnalysisTab  analysis={analysis} game={fullGame} />}
+              {tab === 'Predict'   && <PoissonTab   analysis={analysis} game={fullGame} />}
+              {tab === 'Lineup' && <LineupTab    lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} />}
+              {tab === 'Injuries'   && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
+              {tab === 'Stats'   && <StatsTab     statistics={analysis.statistics ?? []} />}
+              {tab === 'Events' && <EventsTab    events={analysis.events ?? []} />}
+              {tab === 'Info'   && <InfoTab      analysis={analysis} game={fullGame} />}
+              {tab === 'Notes'   && <MemoTab      fixtureId={fixtureId} />}
             </>
           ) : (
             <div className="py-16 text-center">
-              <div className="text-slate-600 text-sm font-bold mb-2">분석 데이터를 불러올 수 없습니다</div>
-              <div className="text-[11px] text-slate-700">API 한도 초과 또는 네트워크 오류</div>
+              <div className="text-slate-600 text-sm font-bold mb-2">Could not load analysis data</div>
+              <div className="text-[11px] text-slate-700">API limit exceeded or network error</div>
             </div>
           )}
         </div>

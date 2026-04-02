@@ -49,9 +49,9 @@ export default function MatchResultsPage() {
             <div className="p-2 bg-amber-500/20 rounded-xl">
                  <Monitor className="w-6 h-6 text-amber-500" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tighter">경기결과</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tighter">Results</h1>
           </div>
-          <p className="text-slate-400 font-medium">배트맨 공식 회차별 최종 스코어 및 결과 (실시간 연동)</p>
+          <p className="text-slate-400 font-medium">Official round-by-round final scores & results (live sync)</p>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-4">
@@ -59,7 +59,7 @@ export default function MatchResultsPage() {
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
             <input 
               type="text" 
-              placeholder="경기 검색..."
+              placeholder="Search matches..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-white/5 border border-white/5 text-xs font-bold pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white"
@@ -67,9 +67,9 @@ export default function MatchResultsPage() {
           </div>
           <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5 w-full sm:w-auto">
             {[
-              { key: 'ALL', label: '전체' },
-              { key: 'PROTO', label: '프로토' },
-              { key: 'TOTO', label: '토토' },
+              { key: 'ALL', label: 'All' },
+              { key: 'PROTO', label: 'Proto' },
+              { key: 'TOTO', label: 'Toto' },
             ].map((t) => (
               <button
                 key={t.key}
@@ -97,10 +97,10 @@ export default function MatchResultsPage() {
           {/* Summary Stats Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { icon: CheckCircle2, label: '최근 마감', val: games[0]?.date || '--', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
-              { icon: Trophy, label: '적중 경기', val: `${Math.floor(games.length * 0.42)}건`, color: 'text-amber-500', bg: 'bg-amber-500/10' },
-              { icon: Calendar, label: '분석 주간', val: '2026.03', color: 'text-blue-500', bg: 'bg-blue-500/10' },
-              { icon: BarChart3, label: '갱신 상태', val: 'READY', color: 'text-purple-500', bg: 'bg-purple-500/10' },
+              { icon: CheckCircle2, label: 'Latest Close', val: games[0]?.date || '--', color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+              { icon: Trophy, label: 'Hit Matches', val: `${Math.floor(games.length * 0.42)}`, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+              { icon: Calendar, label: 'Analysis Week', val: '2026.03', color: 'text-blue-500', bg: 'bg-blue-500/10' },
+              { icon: BarChart3, label: 'Sync Status', val: 'READY', color: 'text-purple-500', bg: 'bg-purple-500/10' },
             ].map((stat, i) => (
               <div key={i} className="bg-[#0d1425] border border-white/5 rounded-2xl p-4 flex items-center space-x-4">
                 <div className={`${stat.bg} p-2.5 rounded-xl`}>
@@ -120,11 +120,11 @@ export default function MatchResultsPage() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="bg-white/[0.02] border-b border-white/5 text-slate-500">
-                    <th className="px-6 py-5 text-left font-black text-[10px] uppercase tracking-wider">종목 / 회차</th>
-                    <th className="px-6 py-5 text-left font-black text-[10px] uppercase tracking-wider">팀 대진</th>
+                    <th className="px-6 py-5 text-left font-black text-[10px] uppercase tracking-wider">Category / Round</th>
+                    <th className="px-6 py-5 text-left font-black text-[10px] uppercase tracking-wider">Match</th>
                     <th className="px-6 py-5 text-center font-black text-[10px] uppercase tracking-wider">SCORE</th>
                     <th className="px-6 py-5 text-center font-black text-[10px] uppercase tracking-wider italic">RESULT</th>
-                    <th className="px-6 py-5 text-right font-black text-[10px] uppercase tracking-wider">발매일</th>
+                    <th className="px-6 py-5 text-right font-black text-[10px] uppercase tracking-wider">Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.03]">
@@ -141,7 +141,7 @@ export default function MatchResultsPage() {
                           <span className="text-[10px] font-black text-slate-600 uppercase group-hover:text-amber-500 transition-colors">
                             {game.type?.replace('_', ' ')}
                           </span>
-                          <span className="text-sm font-black text-white">{game.round || '39회차'}</span>
+                          <span className="text-sm font-black text-white">{game.round || 'R39'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">

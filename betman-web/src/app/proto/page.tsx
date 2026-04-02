@@ -43,16 +43,16 @@ export default function ProtoPage() {
             <div className="p-2 bg-emerald-500/20 rounded-xl">
                  <LayoutGrid className="w-6 h-6 text-emerald-500" />
             </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter">프로토 승부식</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter">Proto</h1>
           </div>
-          <p className="text-slate-400 font-medium">실시간 배당 변동 및 AI 분석 기반 데이터 센터 (자동 업데이트)</p>
+          <p className="text-slate-400 font-medium">Real-time odds analysis & AI-powered data center (auto-update)</p>
         </div>
 
         <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 shadow-2xl">
           {[
-            { key: 'ALL', label: '전체' },
-            { key: 'WIN_LOSS', label: '승부식' },
-            { key: 'SPECIAL', label: '기록식' },
+            { key: 'ALL', label: 'All' },
+            { key: 'WIN_LOSS', label: 'Win/Loss' },
+            { key: 'SPECIAL', label: 'Special' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -76,7 +76,7 @@ export default function ProtoPage() {
         </div>
       ) : filteredGames.length === 0 ? (
         <div className="text-center py-24 bg-[#0d1425] rounded-3xl border border-white/5 border-dashed">
-          <p className="text-slate-500 font-black italic">현재 발매 중인 프로토 경기가 없습니다.</p>
+          <p className="text-slate-500 font-black italic">No proto matches currently available.</p>
         </div>
       ) : (
         <div className="grid gap-3">

@@ -9,7 +9,7 @@ interface Bet {
   awayTeam: string;
   league: string;
   date: string;
-  myPick: '홈' | '무' | '원정';
+  myPick: 'Home' | 'Draw' | 'Away';
   odds: number;
   stake: number;
   result: 'pending' | 'win' | 'lose' | 'void';
@@ -32,11 +32,11 @@ function ResultBadge({ result, onClick }: { result: Bet['result']; onClick: () =
     lose:    'bg-red-500/20 text-red-400 border-red-500/30',
     void:    'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
   }[result];
-  const label = { pending: '대기중', win: '적중', lose: '실패', void: '취소' }[result];
+  const label = { pending: 'Pending', win: 'Won', lose: 'Lost', void: 'Void' }[result];
   return (
     <button
       onClick={onClick}
-      title="클릭하여 결과 변경"
+      title="Click to change result"
       className={`px-2 py-0.5 rounded-full border text-[9px] font-black transition-all hover:opacity-80 shrink-0 ${cfg}`}
     >
       {label}
@@ -45,15 +45,15 @@ function ResultBadge({ result, onClick }: { result: Bet['result']; onClick: () =
 }
 
 const FILTER_TABS: { key: Bet['result'] | 'all'; label: string }[] = [
-  { key: 'all',     label: '전체' },
-  { key: 'pending', label: '대기중' },
-  { key: 'win',     label: '적중' },
-  { key: 'lose',    label: '실패' },
-  { key: 'void',    label: '취소' },
+  { key: 'all',     label: 'All' },
+  { key: 'pending', label: 'Pending' },
+  { key: 'win',     label: 'Won' },
+  { key: 'lose',    label: 'Lost' },
+  { key: 'void',    label: 'Void' },
 ];
 
 function emptyForm(): Omit<Bet, 'id' | 'result'> {
-  return { homeTeam: '', awayTeam: '', league: '', date: '', myPick: '홈', odds: 0, stake: 0, note: '' };
+  return { homeTeam: '', awayTeam: '', league: '', date: '', myPick: 'Home', odds: 0, stake: 0, note: '' };
 }
 
 export default function BetTrackerPage() {
@@ -77,15 +77,15 @@ export default function BetTrackerPage() {
 
   const addBet = () => {
     if (!form.homeTeam.trim() || !form.awayTeam.trim()) {
-      setFormError('홈팀과 원정팀을 입력해주세요.');
+      setFormError('Please enter home and away team names.');
       return;
     }
     if (!form.odds || form.odds <= 1) {
-      setFormError('배당률은 1보다 커야 합니다.');
+      setFormError('Odds must be greater than 1.');
       return;
     }
     if (!form.stake || form.stake <= 0) {
-      setFormError('베팅 금액을 입력해주세요.');
+      setFormError('Please enter a stake amount.');
       return;
     }
     setFormError('');
@@ -141,18 +141,18 @@ export default function BetTrackerPage() {
         <div className="flex items-center gap-3 mb-6">
           <BookOpen className="w-6 h-6 text-indigo-400" />
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tighter">베팅 기록</h1>
-            <p className="text-slate-500 text-xs font-medium">로컬 저장 · 개인 베팅 기록 관리</p>
+            <h1 className="text-2xl font-black text-white tracking-tighter">Bet Tracker</h1>
+            <p className="text-slate-500 text-xs font-medium">Local storage · Personal betting log</p>
           </div>
         </div>
 
         {/* 통계 바 */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           {[
-            { label: '총 베팅', value: `${bets.length}건`, color: 'text-white' },
-            { label: '적중률',  value: `${hitRate}%`,      color: 'text-emerald-400' },
-            { label: '총 투자', value: `${totalStake.toLocaleString()}`, color: 'text-slate-300' },
-            { label: '순 손익', value: `${totalProfit >= 0 ? '+' : ''}${totalProfit.toLocaleString()}`, color: totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400' },
+            { label: 'Total Bets', value: `${bets.length}`, color: 'text-white' },
+            { label: 'Hit Rate',  value: `${hitRate}%`,      color: 'text-emerald-400' },
+            { label: 'Total Stake', value: `${totalStake.toLocaleString()}`, color: 'text-slate-300' },
+            { label: 'Net P/L', value: `${totalProfit >= 0 ? '+' : ''}${totalProfit.toLocaleString()}`, color: totalProfit >= 0 ? 'text-emerald-400' : 'text-red-400' },
             { label: 'ROI',     value: `${roi >= 0 ? '+' : ''}${roi}%`, color: roi >= 0 ? 'text-indigo-400' : 'text-red-400' },
           ].map(({ label, value, color }) => (
             <div key={label} className="bg-[var(--bg-card)] border border-white/5 rounded-2xl p-3 text-center">
@@ -164,25 +164,25 @@ export default function BetTrackerPage() {
 
         {/* 베팅 추가 폼 */}
         <div className="bg-[var(--bg-card)] border border-white/5 rounded-2xl p-5 mb-6">
-          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">새 베팅 추가</div>
+          <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4">Add New Bet</div>
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className={labelCls}>홈팀</label>
-              <input className={inputCls} placeholder="홈팀 이름" value={form.homeTeam}
+              <label className={labelCls}>Home Team</label>
+              <input className={inputCls} placeholder="Home team name" value={form.homeTeam}
                 onChange={e => setForm(f => ({ ...f, homeTeam: e.target.value }))} />
             </div>
             <div>
-              <label className={labelCls}>원정팀</label>
-              <input className={inputCls} placeholder="원정팀 이름" value={form.awayTeam}
+              <label className={labelCls}>Away Team</label>
+              <input className={inputCls} placeholder="Away team name" value={form.awayTeam}
                 onChange={e => setForm(f => ({ ...f, awayTeam: e.target.value }))} />
             </div>
             <div>
-              <label className={labelCls}>리그</label>
-              <input className={inputCls} placeholder="리그명" value={form.league}
+              <label className={labelCls}>League</label>
+              <input className={inputCls} placeholder="League name" value={form.league}
                 onChange={e => setForm(f => ({ ...f, league: e.target.value }))} />
             </div>
             <div>
-              <label className={labelCls}>날짜</label>
+              <label className={labelCls}>Date</label>
               <input className={inputCls} type="date" value={form.date}
                 onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
             </div>
@@ -190,9 +190,9 @@ export default function BetTrackerPage() {
 
           {/* 픽 선택 */}
           <div className="mb-3">
-            <label className={labelCls}>내 픽</label>
+            <label className={labelCls}>My Pick</label>
             <div className="flex gap-2">
-              {(['홈', '무', '원정'] as const).map(pick => (
+              {(['Home', 'Draw', 'Away'] as const).map(pick => (
                 <button
                   key={pick}
                   onClick={() => setForm(f => ({ ...f, myPick: pick }))}
@@ -210,20 +210,20 @@ export default function BetTrackerPage() {
 
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className={labelCls}>배당률</label>
-              <input className={inputCls} type="number" step="0.01" min="1.01" placeholder="예: 1.85"
+              <label className={labelCls}>Odds</label>
+              <input className={inputCls} type="number" step="0.01" min="1.01" placeholder="e.g. 1.85"
                 value={form.odds || ''} onChange={e => setForm(f => ({ ...f, odds: parseFloat(e.target.value) || 0 }))} />
             </div>
             <div>
-              <label className={labelCls}>베팅 금액</label>
-              <input className={inputCls} type="number" min="1" placeholder="예: 10000"
+              <label className={labelCls}>Stake</label>
+              <input className={inputCls} type="number" min="1" placeholder="e.g. 100"
                 value={form.stake || ''} onChange={e => setForm(f => ({ ...f, stake: parseFloat(e.target.value) || 0 }))} />
             </div>
           </div>
 
           <div className="mb-4">
-            <label className={labelCls}>메모 (선택)</label>
-            <input className={inputCls} placeholder="분석 메모..." value={form.note ?? ''}
+            <label className={labelCls}>Note (optional)</label>
+            <input className={inputCls} placeholder="Analysis notes..." value={form.note ?? ''}
               onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
           </div>
 
@@ -234,7 +234,7 @@ export default function BetTrackerPage() {
           {/* 예상 수익 미리보기 */}
           {form.odds > 1 && form.stake > 0 && (
             <div className="mb-4 bg-indigo-500/10 border border-indigo-500/20 rounded-xl px-4 py-2 flex items-center justify-between">
-              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">예상 수익 (적중 시)</span>
+              <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Expected Profit (if won)</span>
               <span className="text-sm font-black text-emerald-400 tabular-nums">
                 +{Math.round(form.stake * (form.odds - 1) * 100) / 100}
               </span>
@@ -246,7 +246,7 @@ export default function BetTrackerPage() {
             className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-500 hover:bg-indigo-400 rounded-xl text-sm font-black text-white transition-all shadow-lg shadow-indigo-500/20"
           >
             <Plus className="w-4 h-4" />
-            베팅 추가
+            Add Bet
           </button>
         </div>
 
@@ -278,7 +278,7 @@ export default function BetTrackerPage() {
         {/* 베팅 목록 */}
         {filtered.length === 0 ? (
           <div className="py-16 text-center text-slate-600 text-sm font-bold bg-[var(--bg-card)] border border-white/5 rounded-2xl border-dashed">
-            베팅 기록이 없습니다.
+            No betting records yet.
           </div>
         ) : (
           <div className="space-y-2">
@@ -304,8 +304,8 @@ export default function BetTrackerPage() {
                       {/* 픽 + 배당 + 금액 */}
                       <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                         <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg ${
-                          bet.myPick === '홈' ? 'bg-indigo-500/20 text-indigo-400' :
-                          bet.myPick === '원정' ? 'bg-purple-500/20 text-purple-400' :
+                          bet.myPick === 'Home' ? 'bg-indigo-500/20 text-indigo-400' :
+                          bet.myPick === 'Away' ? 'bg-purple-500/20 text-purple-400' :
                           'bg-yellow-500/20 text-yellow-400'
                         }`}>
                           {bet.myPick}
@@ -329,7 +329,7 @@ export default function BetTrackerPage() {
                       <button
                         onClick={() => deleteBet(bet.id)}
                         className="p-1 rounded-lg text-slate-600 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                        title="삭제"
+                        title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

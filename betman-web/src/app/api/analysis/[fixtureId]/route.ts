@@ -67,9 +67,10 @@ export async function GET(
     // Step 2: 상태에 따라 필요한 데이터만 병렬 호출
     // 예정(NS): predictions + team fixtures (3 calls)
     // 진행/종료: events + statistics + lineups + team fixtures (5 calls)
+    // 🔧 유료 플랜 전환 시 아래 두 줄을 &season=2024 → &last=20 으로 변경
     const fetchMap: Record<string, Promise<any>> = {
-      teamHome: homeTeamId ? apiFetch(`/fixtures?team=${homeTeamId}&last=20`) : Promise.resolve([]),
-      teamAway: awayTeamId ? apiFetch(`/fixtures?team=${awayTeamId}&last=20`) : Promise.resolve([]),
+      teamHome: homeTeamId ? apiFetch(`/fixtures?team=${homeTeamId}&season=2024`) : Promise.resolve([]),
+      teamAway: awayTeamId ? apiFetch(`/fixtures?team=${awayTeamId}&season=2024`) : Promise.resolve([]),
     };
 
     if (isFinishedOrLive) {
@@ -78,10 +79,13 @@ export async function GET(
       fetchMap.lineups    = apiFetch(`/fixtures/lineups?fixture=${fixtureId}`);
       fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
       fetchMap.injuries   = apiFetch(`/injuries?fixture=${fixtureId}`);
+      fetchMap.players    = apiFetch(`/fixtures/players?fixture=${fixtureId}`);
+      fetchMap.odds       = apiFetch(`/odds?fixture=${fixtureId}&bookmaker=8`);
     } else {
       // 예정 경기: prediction만
       fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
       fetchMap.injuries   = apiFetch(`/injuries?fixture=${fixtureId}`);
+      fetchMap.odds       = apiFetch(`/odds?fixture=${fixtureId}&bookmaker=8`);
     }
 
     const keys = Object.keys(fetchMap);
@@ -105,6 +109,8 @@ export async function GET(
     const stats   = results.statistics  ?? [];
     const lnps    = results.lineups     ?? [];
     const injRaw  = results.injuries    ?? [];
+    const plRaw   = results.players     ?? [];
+    const oddsRaw = results.odds        ?? [];
 
     const p = (pred[0] ?? null) as any;
 
@@ -181,12 +187,14 @@ export async function GET(
       teamId:    l.team?.id,
       formation: l.formation ?? null,
       startXI: (l.startXI ?? []).map((pl: any) => ({
+        id:     pl.player?.id,
         number: pl.player?.number,
         name:   pl.player?.name,
         pos:    pl.player?.pos,
         grid:   pl.player?.grid,
       })),
       substitutes: (l.substitutes ?? []).map((pl: any) => ({
+        id:     pl.player?.id,
         number: pl.player?.number,
         name:   pl.player?.name,
         pos:    pl.player?.pos,
@@ -206,8 +214,14 @@ export async function GET(
     }));
 
     function normalizeRecent(fixtures: any[], teamId: number | null) {
-      return fixtures
+      // 종료된 경기만 필터 → 최신순 정렬 → 최근 20경기
+      const finished = fixtures.filter((f: any) => {
+        const st = f.fixture?.status?.short;
+        return st === 'FT' || st === 'AET' || st === 'PEN';
+      });
+      return finished
         .sort((a: any, b: any) => new Date(b.fixture?.date).getTime() - new Date(a.fixture?.date).getTime())
+        .slice(0, 20)
         .map((f: any) => {
           const isHome = f.teams?.home?.id === teamId;
           const myGoals   = isHome ? f.goals?.home : f.goals?.away;
@@ -238,11 +252,32 @@ export async function GET(
     const homeLast20 = normalizeRecent(results.teamHome ?? [], homeTeamId);
     const awayLast20 = normalizeRecent(results.teamAway ?? [], awayTeamId);
 
+    const playerRatings: Record<number, string> = {};
+    if (plRaw.length > 0) {
+      for (const team of plRaw) {
+        for (const pStat of team.players ?? []) {
+          const rating = pStat.statistics?.[0]?.games?.rating;
+          if (rating) playerRatings[pStat.player.id] = rating;
+        }
+      }
+    }
+
+    let preMatchOdds = null;
+    if (oddsRaw.length > 0) {
+      const bookmaker = oddsRaw[0].bookmakers?.[0];
+      if (bookmaker) {
+        const matchWinner = bookmaker.bets?.find((b: any) => b.id === 1 || b.name === 'Match Winner');
+        if (matchWinner) {
+          preMatchOdds = matchWinner.values.map((v: any) => ({ value: v.value, odd: v.odd }));
+        }
+      }
+    }
+
     const ttl = shortStatus === 'FT' || shortStatus === 'AET' || shortStatus === 'PEN'
       ? 24 * 60 * 60 * 1000  // 종료 경기: 24시간
       : 5 * 60 * 1000;        // 예정/진행: 5분
 
-    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20 };
+    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20, playerRatings, preMatchOdds };
     memCache.set(fixtureId, { data, ts: Date.now(), ttl });
     writeCache(`analysis_${fixtureId}`, data, ttl);
     return NextResponse.json({ success: true, ...data, _debug: debugInfo });

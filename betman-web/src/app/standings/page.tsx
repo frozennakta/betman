@@ -54,10 +54,10 @@ export default function StandingsPage() {
           setStandings(d.standings?.[0] ?? []);
           setLeagueInfo(d.leagueInfo ?? null);
         } else {
-          setError(d.message ?? '데이터 로드 실패');
+          setError(d.message ?? 'Failed to load data');
         }
       })
-      .catch(() => setError('네트워크 오류'))
+      .catch(() => setError('Network error'))
       .finally(() => setLoading(false));
   }, [selectedLeague]);
 
@@ -80,9 +80,9 @@ export default function StandingsPage() {
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-1">
             <Trophy className="w-6 h-6 text-amber-400" />
-            <h1 className="text-2xl font-black text-white tracking-tighter">리그 순위표</h1>
+            <h1 className="text-2xl font-black text-white tracking-tighter">League Standings</h1>
           </div>
-          <p className="text-slate-500 text-sm font-medium">{DEFAULT_SEASON}/{String(Number(DEFAULT_SEASON) + 1).slice(2)} 시즌 최신 순위</p>
+          <p className="text-slate-500 text-sm font-medium">{DEFAULT_SEASON}/{String(Number(DEFAULT_SEASON) + 1).slice(2)} Season Latest Rankings</p>
         </div>
 
         {/* 리그 선택 탭 — 가로 스크롤 */}
@@ -117,7 +117,7 @@ export default function StandingsPage() {
         {loading && (
           <div className="flex items-center justify-center gap-2 py-20 text-slate-500">
             <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm font-black">순위 데이터 로딩 중...</span>
+            <span className="text-sm font-black">Loading standings...</span>
           </div>
         )}
 
@@ -142,7 +142,7 @@ export default function StandingsPage() {
               </div>
               <div className="flex items-center gap-1.5">
                 <div className="w-3 h-3 rounded border-l-2 border-l-red-500 bg-red-500/10" />
-                <span className="text-[9px] font-black text-slate-600 uppercase tracking-wider">강등권</span>
+                <span className="text-[9px] font-black text-slate-600 uppercase tracking-wider">Relegation</span>
               </div>
             </div>
 
@@ -150,16 +150,16 @@ export default function StandingsPage() {
             <div className="grid items-center text-[9px] font-black text-slate-600 uppercase tracking-widest px-4 py-2 border-b border-white/5"
               style={{ gridTemplateColumns: '2rem 1fr 2.5rem 2rem 2rem 2rem 2rem 2rem 2.5rem 2.5rem 5rem' }}>
               <span className="text-center">#</span>
-              <span>팀</span>
-              <span className="text-center">경기</span>
-              <span className="text-center">승</span>
-              <span className="text-center">무</span>
-              <span className="text-center">패</span>
-              <span className="text-center">득</span>
-              <span className="text-center">실</span>
-              <span className="text-center">득실</span>
-              <span className="text-center">승점</span>
-              <span className="text-center">최근5</span>
+              <span>Team</span>
+              <span className="text-center">MP</span>
+              <span className="text-center">W</span>
+              <span className="text-center">D</span>
+              <span className="text-center">L</span>
+              <span className="text-center">GF</span>
+              <span className="text-center">GA</span>
+              <span className="text-center">GD</span>
+              <span className="text-center">Pts</span>
+              <span className="text-center">Form</span>
             </div>
 
             {standings.map((t) => (
@@ -192,7 +192,7 @@ export default function StandingsPage() {
 
         {!loading && !error && standings.length === 0 && (
           <div className="py-16 text-center text-slate-600 text-sm font-bold">
-            순위 데이터가 없습니다.
+            No standings data available.
           </div>
         )}
 

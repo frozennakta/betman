@@ -4,8 +4,9 @@ import { useEffect, useState } from 'react';
 import { MapPin, User, Calendar, Trophy } from 'lucide-react';
 
 export const STATUS_LABEL: Record<string, string> = {
-  '1H': '전반전', 'HT': '하프타임', '2H': '후반전',
-  'ET': '연장전', 'P': '승부차기', 'FT': '종료', 'PENDING': '예정',
+  '1H': '1st Half', 'HT': 'Half Time', '2H': '2nd Half',
+  'ET': 'Extra Time', 'P': 'Penalties', 'FT': 'Full Time', 'PENDING': 'Scheduled',
+  'BT': 'Break', 'INT': 'Interrupted', 'SUSP': 'Suspended', 'LIVE': 'Live',
 };
 
 export const BIG_LEAGUES = new Set([
@@ -26,10 +27,10 @@ export function useLocalDateTime(isoDate: string | undefined) {
     const nDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const diff = Math.round((dDay - nDay) / 86400000);
     const date =
-      diff === -1 ? '어제'
-      : diff === 0 ? '오늘'
-      : diff === 1 ? '내일'
-      : d.toLocaleDateString([], { month: 'numeric', day: 'numeric' });
+      diff === -1 ? 'Yesterday'
+      : diff === 0 ? 'Today'
+      : diff === 1 ? 'Tomorrow'
+      : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     setDt({ time, date });
   }, [isoDate]);
   return dt;
@@ -142,30 +143,30 @@ export function InfoTab({ analysis, game }: { analysis: any; game: any }) {
   return (
     <div className="space-y-4">
       <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
-        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">경기 기본 정보</div>
+        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Match Info</div>
         {localDT.time && (
-          <InfoRow icon={<Calendar className="w-3.5 h-3.5" />} label="킥오프" value={`${localDT.date} ${localDT.time} (현지 시간)`} />
+          <InfoRow icon={<Calendar className="w-3.5 h-3.5" />} label="Kick-off" value={`${localDT.date} ${localDT.time} (local time)`} />
         )}
-        <InfoRow icon={<Trophy className="w-3.5 h-3.5" />} label="리그" value={game.league} />
-        <InfoRow label="국가" value={`${flag} ${game.country}`} />
-        {analysis.season && <InfoRow label="시즌" value={String(analysis.season)} />}
-        {analysis.round  && <InfoRow label="라운드" value={analysis.round} />}
+        <InfoRow icon={<Trophy className="w-3.5 h-3.5" />} label="League" value={game.league} />
+        <InfoRow label="Country" value={`${flag} ${game.country}`} />
+        {analysis.season && <InfoRow label="Season" value={String(analysis.season)} />}
+        {analysis.round  && <InfoRow label="Round" value={analysis.round} />}
       </div>
       {(game.venue?.name || game.referee) && (
         <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
-          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">장소 & 심판</div>
+          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Venue & Referee</div>
           {game.venue?.name && (
-            <InfoRow icon={<MapPin className="w-3.5 h-3.5" />} label="경기장" value={`${game.venue.name}${game.venue.city ? ` · ${game.venue.city}` : ''}`} />
+            <InfoRow icon={<MapPin className="w-3.5 h-3.5" />} label="Venue" value={`${game.venue.name}${game.venue.city ? ` · ${game.venue.city}` : ''}`} />
           )}
           {game.referee && (
-            <InfoRow icon={<User className="w-3.5 h-3.5" />} label="주심" value={game.referee} />
+            <InfoRow icon={<User className="w-3.5 h-3.5" />} label="Ref" value={game.referee} />
           )}
         </div>
       )}
       <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
-        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">팀 정보</div>
+        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Team Info</div>
         <div className="grid grid-cols-2 gap-3">
-          {[{ label: '홈팀', name: game.homeTeam }, { label: '원정팀', name: game.awayTeam }].map(({ label, name }) => (
+          {[{ label: 'Home', name: game.homeTeam }, { label: 'Away', name: game.awayTeam }].map(({ label, name }) => (
             <div key={label} className="bg-white/5 rounded-xl p-3 border border-white/5 text-center">
               <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">{label}</div>
               <div className="text-sm font-black text-white leading-tight">{name}</div>
@@ -183,7 +184,7 @@ export function InfoTab({ analysis, game }: { analysis: any; game: any }) {
 // ── 탭: 이벤트 ────────────────────────────────────────────────────────────────
 export function EventsTab({ events }: { events: any[] }) {
   if (!events || events.length === 0) {
-    return <div className="py-12 text-center text-slate-600 text-sm font-bold">이벤트 없음 (경기 전 또는 미지원)</div>;
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">No events (pre-match or unsupported)</div>;
   }
   const icon = (type: string, detail: string) => {
     if (type === 'Goal') return detail.includes('Penalty') ? '⚽🎯' : detail.includes('Own') ? '⚽🔴' : '⚽';
@@ -192,21 +193,28 @@ export function EventsTab({ events }: { events: any[] }) {
     if (type === 'Var') return '📺';
     return '•';
   };
+  // Group events by team for home/away alignment
+  // Determine home team name from first event or use first unique team
+  const teamNames = [...new Set(events.map(e => e.team))];
+  const homeTeamName = teamNames[0] ?? '';
+  
   return (
     <div className="space-y-1.5">
-      {events.map((e, i) => (
-        <div key={i} className="flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2 border border-white/5">
-          <span className="text-[10px] font-black text-slate-500 w-10 shrink-0 text-right tabular-nums">
-            {e.minute}{e.extra ? `+${e.extra}` : ''}'
-          </span>
-          <span className="text-base w-6 text-center shrink-0">{icon(e.type, e.detail)}</span>
-          <div className="flex-1 min-w-0">
-            <span className="text-xs font-bold text-white truncate block">{e.player}</span>
-            {e.assist && <span className="text-[9px] text-slate-500 truncate block">→ {e.assist}</span>}
+      {events.map((e, i) => {
+        const isHome = e.team === homeTeamName;
+        return (
+          <div key={i} className={`flex items-center gap-3 bg-black/20 rounded-xl px-3 py-2 border border-white/5 ${!isHome ? 'flex-row-reverse' : ''}`}>
+            <span className={`text-[10px] font-black text-slate-500 w-10 shrink-0 tabular-nums leading-none ${isHome ? 'text-right' : 'text-left'}`}>
+              {e.minute}{e.extra ? `+${e.extra}` : ''}'
+            </span>
+            <span className="text-base w-6 text-center shrink-0">{icon(e.type, e.detail)}</span>
+            <div className={`flex-1 min-w-0 ${!isHome ? 'text-right' : 'text-left'}`}>
+              <span className="text-xs font-bold text-white truncate block">{e.player}</span>
+              {e.assist && <span className="text-[9px] text-slate-500 truncate block">→ {e.assist}</span>}
+            </div>
           </div>
-          <span className="text-[9px] font-black text-slate-600 shrink-0 truncate max-w-[80px] text-right">{e.team}</span>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -214,18 +222,18 @@ export function EventsTab({ events }: { events: any[] }) {
 // ── 탭: 스탯 ──────────────────────────────────────────────────────────────────
 export function StatsTab({ statistics }: { statistics: any[] }) {
   if (!statistics || statistics.length < 2) {
-    return <div className="py-12 text-center text-slate-600 text-sm font-bold">스탯 없음 (경기 전 또는 미지원)</div>;
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">No stats (pre-match or unsupported)</div>;
   }
   const homeStats = statistics[0];
   const awayStats = statistics[1];
   const homeMap = Object.fromEntries((homeStats.stats ?? []).map((s: any) => [s.type, s.value]));
   const awayMap = Object.fromEntries((awayStats.stats ?? []).map((s: any) => [s.type, s.value]));
   const rows = [
-    ['Ball Possession', '점유율'], ['Total Shots', '전체 슈팅'], ['Shots on Goal', '유효 슈팅'],
-    ['Shots off Goal', '빗나간 슈팅'], ['Blocked Shots', '블록'], ['Corner Kicks', '코너킥'],
-    ['Fouls', '파울'], ['Yellow Cards', '옐로카드'], ['Red Cards', '레드카드'],
-    ['Goalkeeper Saves', '선방'], ['Total passes', '패스 총계'], ['Passes accurate', '성공 패스'],
-    ['Passes %', '패스 성공률'], ['Offsides', '오프사이드'],
+    ['Ball Possession', 'Possession'], ['Total Shots', 'Shots'], ['Shots on Goal', 'On Target'],
+    ['Shots off Goal', 'Off Target'], ['Blocked Shots', 'Blocked'], ['Corner Kicks', 'Corners'],
+    ['Fouls', 'Fouls'], ['Yellow Cards', 'Yellows'], ['Red Cards', 'Reds'],
+    ['Goalkeeper Saves', 'Saves'], ['Total passes', 'Total Passes'], ['Passes accurate', 'Accurate Passes'],
+    ['Passes %', 'Pass %'], ['Offsides', 'Offsides'],
   ].filter(([key]) => homeMap[key] != null || awayMap[key] != null);
   return (
     <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
@@ -320,9 +328,9 @@ function PitchView({ lineup }: { lineup: any }) {
   );
 }
 
-export function LineupTab({ lineups }: { lineups: any[] }) {
+export function LineupTab({ lineups, playerRatings = {} }: { lineups: any[], playerRatings?: Record<number, string> }) {
   if (!lineups || lineups.length === 0) {
-    return <div className="py-12 text-center text-slate-600 text-sm font-bold">라인업 미발표</div>;
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">Lineup not announced</div>;
   }
   const hasVisual = lineups.some(l => l.formation && (l.startXI ?? []).some((p: any) => p.grid));
   return (
@@ -359,7 +367,7 @@ export function LineupTab({ lineups }: { lineups: any[] }) {
             </div>
           </div>
           <div className="mb-3">
-            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">선발 XI</div>
+            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Starting XI</div>
             <div className="grid grid-cols-2 gap-1">
               {l.startXI.map((p: any) => (
                 <div key={p.number} className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5">
@@ -371,18 +379,28 @@ export function LineupTab({ lineups }: { lineups: any[] }) {
                     'text-red-400 bg-red-500/10'
                   }`}>{POS_LABEL[p.pos] ?? p.pos}</span>
                   <span className="text-xs font-bold text-white truncate">{p.name}</span>
+                  {playerRatings[p.id] && (
+                    <span className={`ml-auto shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded ${parseFloat(playerRatings[p.id]) >= 7.0 ? 'bg-amber-500/20 text-amber-500' : parseFloat(playerRatings[p.id]) >= 6.0 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/20 text-slate-400'}`}>
+                      ★ {parseFloat(playerRatings[p.id]).toFixed(1)}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
           {l.substitutes?.length > 0 && (
             <div>
-              <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">후보</div>
+              <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Substitutes</div>
               <div className="grid grid-cols-2 gap-1">
                 {l.substitutes.map((p: any) => (
                   <div key={p.number} className="flex items-center gap-2 px-2 py-1">
                     <span className="text-[10px] font-black text-slate-600 w-5 text-right tabular-nums shrink-0">{p.number}</span>
                     <span className="text-xs text-slate-500 truncate">{p.name}</span>
+                    {playerRatings[p.id] && (
+                      <span className={`ml-auto shrink-0 text-[9px] font-black px-1 py-0.5 rounded ${parseFloat(playerRatings[p.id]) >= 7.0 ? 'text-amber-500' : 'text-slate-500'}`}>
+                        {parseFloat(playerRatings[p.id]).toFixed(1)}
+                      </span>
+                    )}
                   </div>
                 ))}
               </div>
@@ -416,11 +434,11 @@ function H2HSection({ h2h, homeTeamName }: { h2h: any[]; homeTeamName: string })
     <div>
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">맞대결 기록 ({h2h.length})</span>
+          <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">H2H Record ({h2h.length})</span>
           {[
-            { label: `${w}승`,  cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-            { label: `${d}무`, cls: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
-            { label: `${l}패`,  cls: 'bg-red-500/20 text-red-400 border-red-500/30' },
+            { label: `${w}W`,  cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+            { label: `${d}D`, cls: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
+            { label: `${l}L`,  cls: 'bg-red-500/20 text-red-400 border-red-500/30' },
           ].map(({ label, cls }) => (
             <span key={label} className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>
           ))}
@@ -436,22 +454,22 @@ function H2HSection({ h2h, homeTeamName }: { h2h: any[]; homeTeamName: string })
                   : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
               }`}
             >
-              {f === 'all' ? '전체' : f === 'home' ? '홈' : '원정'}
+              {f === 'all' ? 'All' : f === 'home' ? 'Home' : 'Away'}
             </button>
           ))}
         </div>
       </div>
 
       {filtered.length === 0 ? (
-        <div className="py-4 text-center text-[10px] text-slate-600 font-bold">해당 조건의 경기 없음</div>
+        <div className="py-4 text-center text-[10px] text-slate-600 font-bold">No matches found</div>
       ) : (
         <>
           <div className="flex items-center gap-2 px-2 py-1 mb-1">
-            <span className="text-[8px] font-black text-slate-700 w-[72px] shrink-0">날짜</span>
-            <span className="text-[8px] font-black text-slate-700 flex-1 text-right">홈</span>
-            <span className="text-[8px] font-black text-slate-700 w-12 text-center shrink-0">스코어</span>
-            <span className="text-[8px] font-black text-slate-700 flex-1">원정</span>
-            <span className="text-[8px] font-black text-slate-700 w-5 text-center shrink-0">결과</span>
+            <span className="text-[8px] font-black text-slate-700 w-[72px] shrink-0">Date</span>
+            <span className="text-[8px] font-black text-slate-700 flex-1 text-right">Home</span>
+            <span className="text-[8px] font-black text-slate-700 w-12 text-center shrink-0">Score</span>
+            <span className="text-[8px] font-black text-slate-700 flex-1">Away</span>
+            <span className="text-[8px] font-black text-slate-700 w-5 text-center shrink-0">W/L</span>
           </div>
           <div className="space-y-0.5">
             {filtered.map((m: any, i: number) => {
@@ -463,19 +481,28 @@ function H2HSection({ h2h, homeTeamName }: { h2h: any[]; homeTeamName: string })
               const resultCls = result === 'W' ? 'bg-emerald-500 text-white' : result === 'D' ? 'bg-slate-500 text-white' : 'bg-red-500 text-white';
               const hw = m.homeGoals > m.awayGoals;
               const aw = m.awayGoals > m.homeGoals;
+              
+              const hPro = m.homeTeam === homeTeamName;
+              const aPro = m.awayTeam === homeTeamName;
+              
+              const hColor = (hPro && hw) ? 'text-emerald-500 font-extrabold' : hw ? 'text-white font-extrabold' : 'text-slate-700 dark:text-slate-400 font-medium';
+              const aColor = (aPro && aw) ? 'text-emerald-500 font-extrabold' : aw ? 'text-white font-extrabold' : 'text-slate-700 dark:text-slate-400 font-medium';
+              const sColorH = hw ? (hPro ? 'text-emerald-500' : 'text-white') : 'text-slate-500 dark:text-slate-400';
+              const sColorA = aw ? (aPro ? 'text-emerald-500' : 'text-white') : 'text-slate-500 dark:text-slate-400';
+
               return (
-                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-black/20 border border-white/5">
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-black/20 border border-white/5 hover:bg-white/[0.02] transition-colors">
                   <div className="w-[72px] shrink-0">
-                    <div className="text-[9px] font-bold text-slate-400 tabular-nums">{m.date}</div>
-                    {m.league && <div className="text-[8px] text-slate-600 truncate">{m.league}</div>}
+                    <div className="text-[9px] font-bold text-slate-600 dark:text-slate-400 tabular-nums">{m.date}</div>
+                    {m.league && <div className="text-[8px] text-slate-500 dark:text-slate-600 truncate">{m.league}</div>}
                   </div>
-                  <span className={`flex-1 text-[10px] font-bold truncate text-right ${hw ? 'text-white' : 'text-slate-500'}`}>{m.homeTeam}</span>
+                  <span className={`flex-1 text-[10px] truncate text-right ${hColor}`}>{m.homeTeam}</span>
                   <div className="w-12 shrink-0 flex items-center justify-center gap-0.5">
-                    <span className={`text-xs font-black tabular-nums ${hw ? 'text-white' : 'text-slate-500'}`}>{m.homeGoals}</span>
-                    <span className="text-slate-600 text-[10px]">:</span>
-                    <span className={`text-xs font-black tabular-nums ${aw ? 'text-white' : 'text-slate-500'}`}>{m.awayGoals}</span>
+                    <span className={`text-xs font-black tabular-nums ${sColorH}`}>{m.homeGoals}</span>
+                    <span className="text-slate-400 dark:text-slate-600 text-[10px]">:</span>
+                    <span className={`text-xs font-black tabular-nums ${sColorA}`}>{m.awayGoals}</span>
                   </div>
-                  <span className={`flex-1 text-[10px] font-bold truncate ${aw ? 'text-white' : 'text-slate-500'}`}>{m.awayTeam}</span>
+                  <span className={`flex-1 text-[10px] truncate ${aColor}`}>{m.awayTeam}</span>
                   <span className={`w-5 h-5 shrink-0 flex items-center justify-center rounded text-[8px] font-black ${resultCls}`}>{result}</span>
                 </div>
               );
@@ -504,12 +531,12 @@ function RecentGamesSection({ recent, teamName }: { recent: any[]; teamName: str
       <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest truncate max-w-[140px]">
-            {teamName} 최근 {recent.length}경기
+            {teamName} Last {recent.length}
           </span>
           {[
-            { label: `${wins}승`,  cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
-            { label: `${draws}무`, cls: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
-            { label: `${losses}패`,cls: 'bg-red-500/20 text-red-400 border-red-500/30' },
+            { label: `${wins}W`,  cls: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
+            { label: `${draws}D`, cls: 'bg-slate-500/20 text-slate-400 border-slate-500/30' },
+            { label: `${losses}L`,cls: 'bg-red-500/20 text-red-400 border-red-500/30' },
           ].map(({ label, cls }) => (
             <span key={label} className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>
           ))}
@@ -525,47 +552,57 @@ function RecentGamesSection({ recent, teamName }: { recent: any[]; teamName: str
                   : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
               }`}
             >
-              {f === 'all' ? '전체' : f === 'home' ? '홈' : '원정'}
+              {f === 'all' ? 'All' : f === 'home' ? 'Home' : 'Away'}
             </button>
           ))}
         </div>
       </div>
 
       {recent.length === 0 ? (
-        <div className="py-4 text-center text-[10px] text-slate-600 font-bold">데이터 없음 (API 한도 초과 가능성)</div>
+        <div className="py-4 text-center text-[10px] text-slate-600 font-bold">No data (API limit may have been reached)</div>
       ) : filtered.length === 0 ? (
-        <div className="py-4 text-center text-[10px] text-slate-600 font-bold">해당 조건의 경기 없음</div>
+        <div className="py-4 text-center text-[10px] text-slate-600 font-bold">No matches found</div>
       ) : (
         <>
           <div className="flex items-center gap-2 px-2 py-1 mb-1">
-            <span className="text-[8px] font-black text-slate-700 w-[72px] shrink-0">날짜</span>
-            <span className="text-[8px] font-black text-slate-700 flex-1 text-right">홈</span>
-            <span className="text-[8px] font-black text-slate-700 w-12 text-center shrink-0">스코어</span>
-            <span className="text-[8px] font-black text-slate-700 flex-1">원정</span>
-            <span className="text-[8px] font-black text-slate-700 w-5 text-center shrink-0">결과</span>
+            <span className="text-[8px] font-black text-slate-700 w-[72px] shrink-0">Date</span>
+            <span className="text-[8px] font-black text-slate-700 flex-1 text-right">Home</span>
+            <span className="text-[8px] font-black text-slate-700 w-12 text-center shrink-0">Score</span>
+            <span className="text-[8px] font-black text-slate-700 flex-1">Away</span>
+            <span className="text-[8px] font-black text-slate-700 w-5 text-center shrink-0">W/L</span>
           </div>
           <div className="space-y-0.5">
             {filtered.map((m: any, i: number) => {
               const hw = m.homeGoals != null && m.awayGoals != null && m.homeGoals > m.awayGoals;
               const aw = m.homeGoals != null && m.awayGoals != null && m.awayGoals > m.homeGoals;
+              
+              const hPro = m.homeTeam === teamName;
+              const aPro = m.awayTeam === teamName;
+              
+              const hColor = (hPro && hw) ? 'text-emerald-500 font-extrabold' : hw ? 'text-white font-extrabold' : 'text-slate-700 dark:text-slate-400 font-medium';
+              const aColor = (aPro && aw) ? 'text-emerald-500 font-extrabold' : aw ? 'text-white font-extrabold' : 'text-slate-700 dark:text-slate-400 font-medium';
+              const sColorH = hw ? (hPro ? 'text-emerald-500' : 'text-white') : 'text-slate-500 dark:text-slate-400';
+              const sColorA = aw ? (aPro ? 'text-emerald-500' : 'text-white') : 'text-slate-500 dark:text-slate-400';
+
               const resultCls =
                 m.result === 'W' ? 'bg-emerald-500 text-white' :
-                m.result === 'D' ? 'bg-slate-500 text-white' :
+                m.result === 'D' ? 'bg-slate-400 dark:bg-slate-500 text-white' :
                 m.result === 'L' ? 'bg-red-500 text-white' :
-                'bg-slate-700 text-slate-400';
+                'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400';
+
               return (
-                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-black/20 border border-white/5">
+                <div key={i} className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-black/20 border border-white/5 hover:bg-white/[0.02] transition-colors">
                   <div className="w-[72px] shrink-0">
-                    <div className="text-[9px] font-bold text-slate-400 tabular-nums">{m.date}</div>
-                    {m.league && <div className="text-[8px] text-slate-600 truncate">{m.league}</div>}
+                    <div className="text-[9px] font-bold text-slate-600 dark:text-slate-400 tabular-nums">{m.date}</div>
+                    {m.league && <div className="text-[8px] text-slate-500 dark:text-slate-600 truncate">{m.league}</div>}
                   </div>
-                  <span className={`flex-1 text-[10px] font-bold truncate text-right ${hw ? 'text-white' : 'text-slate-500'}`}>{m.homeTeam}</span>
+                  <span className={`flex-1 text-[10px] truncate text-right ${hColor}`}>{m.homeTeam}</span>
                   <div className="w-12 shrink-0 flex items-center justify-center gap-0.5">
-                    <span className={`text-xs font-black tabular-nums ${hw ? 'text-white' : 'text-slate-500'}`}>{m.homeGoals ?? '–'}</span>
-                    <span className="text-slate-600 text-[10px]">:</span>
-                    <span className={`text-xs font-black tabular-nums ${aw ? 'text-white' : 'text-slate-500'}`}>{m.awayGoals ?? '–'}</span>
+                    <span className={`text-xs font-black tabular-nums ${sColorH}`}>{m.homeGoals ?? '–'}</span>
+                    <span className="text-slate-400 dark:text-slate-600 text-[10px]">:</span>
+                    <span className={`text-xs font-black tabular-nums ${sColorA}`}>{m.awayGoals ?? '–'}</span>
                   </div>
-                  <span className={`flex-1 text-[10px] font-bold truncate ${aw ? 'text-white' : 'text-slate-500'}`}>{m.awayTeam}</span>
+                  <span className={`flex-1 text-[10px] truncate ${aColor}`}>{m.awayTeam}</span>
                   <span className={`w-5 h-5 shrink-0 flex items-center justify-center rounded text-[8px] font-black ${resultCls}`}>
                     {m.result ?? (m.status === 'NS' ? '–' : m.status ?? '–')}
                   </span>
@@ -581,14 +618,52 @@ function RecentGamesSection({ recent, teamName }: { recent: any[]; teamName: str
 
 // ── 탭: 분석 ──────────────────────────────────────────────────────────────────
 export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
+  const odds = analysis.preMatchOdds;
+  let homeOdd: string | null = null, drawOdd: string | null = null, awayOdd: string | null = null;
+  if (odds) {
+    homeOdd = odds.find((o: any) => o.value === 'Home')?.odd;
+    drawOdd = odds.find((o: any) => o.value === 'Draw')?.odd;
+    awayOdd = odds.find((o: any) => o.value === 'Away')?.odd;
+  }
+
   return (
     <div className="space-y-6">
+      {(odds && analysis.prediction) && (
+        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20 mb-6">
+          <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            📊 Value Bet / Match Odds (Bet365)
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            {[
+              { label: 'Home', val: homeOdd ?? '–', prob: analysis.prediction.homeWin, color: 'text-indigo-400' },
+              { label: 'Draw', val: drawOdd ?? '–', prob: analysis.prediction.draw, color: 'text-slate-400' },
+              { label: 'Away', val: awayOdd ?? '–', prob: analysis.prediction.awayWin, color: 'text-purple-400' },
+            ].map((o, idx) => {
+              const pr = parseFloat((o.prob ?? '0').replace('%', '')) / 100;
+              const ev = o.val !== '–' ? parseFloat((pr * parseFloat(o.val)).toFixed(2)) : 0;
+              const isValue = ev > 1.05;
+              return (
+                <div key={idx} className={`bg-black/20 rounded-xl p-2 border ${isValue ? 'border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'border-white/5'}`}>
+                  <div className={`text-lg font-black ${o.color}`}>{o.val}</div>
+                  <div className="text-[10px] text-slate-500 font-bold mb-1">{o.label} ({o.prob ?? '–'})</div>
+                  {isValue && (
+                    <div className="text-[8px] font-black text-amber-400 bg-amber-500/10 py-0.5 rounded uppercase flex items-center justify-center gap-1 mt-1 border border-amber-500/20">
+                      <span className="text-[10px]">🔥</span> Value {ev.toFixed(2)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {analysis.prediction && (
         <div className="grid grid-cols-3 gap-3 text-center">
           {[
-            { label: '홈 승', val: analysis.prediction.homeWin, color: 'text-indigo-400' },
-            { label: '무승부', val: analysis.prediction.draw,    color: 'text-yellow-400' },
-            { label: '원정 승', val: analysis.prediction.awayWin, color: 'text-purple-400' },
+            { label: 'Home Win', val: analysis.prediction.homeWin, color: 'text-indigo-400' },
+            { label: 'Draw', val: analysis.prediction.draw,    color: 'text-yellow-400' },
+            { label: 'Away Win', val: analysis.prediction.awayWin, color: 'text-purple-400' },
           ].map(({ label, val, color }) => (
             <div key={label} className="bg-black/30 rounded-2xl p-4 border border-white/5">
               <div className={`text-2xl font-black ${color}`}>{val ?? '–'}</div>
@@ -601,7 +676,7 @@ export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
         <div className="flex items-center gap-3 bg-amber-500/10 border border-amber-500/20 rounded-xl px-4 py-3">
           <span className="text-xl">🏆</span>
           <div>
-            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">AI 예상 승자</span>
+            <span className="text-[9px] font-black text-amber-500 uppercase tracking-widest block">AI Predicted Winner</span>
             <span className="text-sm font-black text-white">{analysis.prediction.winner}</span>
           </div>
         </div>
@@ -616,7 +691,7 @@ export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
         <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-4">
           <div className="flex justify-between text-[10px] font-black mb-2">
             <span className="text-emerald-400 truncate">{game.homeTeam}</span>
-            <span className="text-slate-600 uppercase tracking-widest">팀 비교</span>
+            <span className="text-slate-600 uppercase tracking-widest">Comparison</span>
             <span className="text-orange-400 truncate text-right">{game.awayTeam}</span>
           </div>
           {[
@@ -640,8 +715,8 @@ export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
               <div className="text-[9px] font-black text-slate-500 truncate">{name}</div>
               {team?.form && <FormBadges form={team.form} />}
               <div className="flex justify-between text-[9px] text-slate-600 font-bold">
-                <span>득점 avg {team?.goalsFor ?? '–'}</span>
-                <span>실점 avg {team?.goalsAgainst ?? '–'}</span>
+                <span>GF avg {team?.goalsFor ?? '–'}</span>
+                <span>GA avg {team?.goalsAgainst ?? '–'}</span>
               </div>
             </div>
           ))}
@@ -671,7 +746,7 @@ export function PoissonTab({ analysis, game }: { analysis: any; game: any }) {
   const awayAvgAgainst = parseFloat(analysis.away?.goalsAgainst) || 0;
 
   if (!homeAvgFor && !awayAvgFor) {
-    return <div className="py-16 text-center text-slate-600 text-sm font-bold">예측 데이터 없음 (팀 평균 골 정보가 필요합니다)</div>;
+    return <div className="py-16 text-center text-slate-600 text-sm font-bold">No prediction data (team goal averages required)</div>;
   }
 
   const lambdaHome = homeAvgFor * awayAvgAgainst;
@@ -700,23 +775,23 @@ export function PoissonTab({ analysis, game }: { analysis: any; game: any }) {
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-black/20 rounded-2xl p-4 border border-white/5 text-center">
-          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">홈 예상 득점</div>
+          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Home xG</div>
           <div className="text-2xl font-black text-emerald-400">{lambdaHome.toFixed(2)}</div>
           <div className="text-[9px] text-slate-500 mt-1">{game.homeTeam}</div>
         </div>
         <div className="bg-black/20 rounded-2xl p-4 border border-white/5 text-center">
-          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">원정 예상 득점</div>
+          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Away xG</div>
           <div className="text-2xl font-black text-orange-400">{lambdaAway.toFixed(2)}</div>
           <div className="text-[9px] text-slate-500 mt-1">{game.awayTeam}</div>
         </div>
       </div>
       <div className="bg-amber-500/10 border border-amber-500/20 rounded-2xl p-4 text-center">
-        <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-2">가장 유력한 스코어</div>
+        <div className="text-[9px] font-black text-amber-500 uppercase tracking-widest mb-2">Most Likely Score</div>
         <div className="text-3xl font-black text-white">{bestH} : {bestA}</div>
-        <div className="text-[10px] text-amber-400 font-bold mt-1">확률 {pct(bestP / totalProb)}</div>
+        <div className="text-[10px] text-amber-400 font-bold mt-1">Probability {pct(bestP / totalProb)}</div>
       </div>
       <div className="bg-black/20 rounded-2xl p-4 border border-white/5 overflow-x-auto">
-        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3">스코어 확률 매트릭스 (홈 ↓ / 원정 →)</div>
+        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3">Score Probability Matrix (Home ↓ / Away →)</div>
         <table className="text-[10px] font-black w-full min-w-[200px]">
           <thead>
             <tr>
@@ -747,9 +822,9 @@ export function PoissonTab({ analysis, game }: { analysis: any; game: any }) {
       </div>
       <div className="grid grid-cols-3 gap-2 text-center">
         {[
-          { label: '홈 승', val: homeWin, color: 'text-indigo-400' },
-          { label: '무승부', val: draw,   color: 'text-yellow-400' },
-          { label: '원정 승', val: awayWin, color: 'text-purple-400' },
+          { label: 'Home Win', val: homeWin, color: 'text-indigo-400' },
+          { label: 'Draw', val: draw,   color: 'text-yellow-400' },
+          { label: 'Away Win', val: awayWin, color: 'text-purple-400' },
         ].map(({ label, val, color }) => (
           <div key={label} className="bg-black/20 rounded-2xl p-3 border border-white/5">
             <div className={`text-xl font-black ${color}`}>{pct(val)}</div>
@@ -760,14 +835,14 @@ export function PoissonTab({ analysis, game }: { analysis: any; game: any }) {
       <div className="grid grid-cols-2 gap-2 text-center">
         <div className="bg-black/20 rounded-2xl p-3 border border-white/5">
           <div className="text-lg font-black text-sky-400">{pct(over25)}</div>
-          <div className="text-[9px] font-black text-slate-600 uppercase mt-1">오버 2.5</div>
+          <div className="text-[9px] font-black text-slate-600 uppercase mt-1">Over 2.5</div>
         </div>
         <div className="bg-black/20 rounded-2xl p-3 border border-white/5">
           <div className="text-lg font-black text-pink-400">{pct(1 - over25)}</div>
-          <div className="text-[9px] font-black text-slate-600 uppercase mt-1">언더 2.5</div>
+          <div className="text-[9px] font-black text-slate-600 uppercase mt-1">Under 2.5</div>
         </div>
       </div>
-      <div className="text-[9px] text-slate-700 text-center">포아송 분포 기반 예측 · 참고용</div>
+      <div className="text-[9px] text-slate-700 text-center">Poisson distribution prediction · for reference only</div>
     </div>
   );
 }
@@ -777,7 +852,7 @@ export function InjuriesTab({ injuries, game }: { injuries: any[]; game: any }) 
   if (!injuries || injuries.length === 0) {
     return (
       <div className="py-12 text-center text-slate-600 text-sm font-bold">
-        부상/결장 정보 없음
+        No injury/suspension data
       </div>
     );
   }
@@ -839,23 +914,23 @@ export function MemoTab({ fixtureId }: { fixtureId: string }) {
   const MAX_CHARS = 1000;
   return (
     <div className="space-y-3">
-      <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest">개인 메모</div>
+      <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Personal Notes</div>
       <textarea
         value={note}
         onChange={e => handleChange(e.target.value)}
         maxLength={MAX_CHARS}
-        placeholder="이 경기에 대한 메모를 입력하세요..."
+        placeholder="Add your notes about this match..."
         className="w-full h-48 bg-black/20 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder:text-slate-700 font-medium resize-none focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all"
       />
       <div className="flex items-center justify-between">
-        <span className="text-[9px] font-bold text-slate-700">자동 저장됨</span>
+        <span className="text-[9px] font-bold text-slate-700">Auto-saved</span>
         <span className={`text-[10px] font-black tabular-nums ${note.length > MAX_CHARS * 0.9 ? 'text-amber-400' : 'text-slate-600'}`}>
           {note.length} / {MAX_CHARS}
         </span>
       </div>
       {note.length > 0 && (
         <button onClick={() => handleChange('')} className="text-[10px] font-black text-red-400/70 hover:text-red-400 transition-colors">
-          메모 삭제
+          Clear Notes
         </button>
       )}
     </div>

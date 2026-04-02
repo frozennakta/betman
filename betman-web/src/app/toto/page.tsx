@@ -43,14 +43,14 @@ export default function TotoPage() {
             </div>
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tighter uppercase">TOTO BOARD</h1>
           </div>
-          <p className="text-slate-400 font-medium tracking-tight">회차별 전체 경기 자동 동기화 (승무패/스페셜 분리 연동)</p>
+          <p className="text-slate-400 font-medium tracking-tight">Auto-synced match data per round (WDL/Special separation)</p>
         </div>
 
         {/* 탭에서 '전체' 삭제 - 사용자 요청 반영 */}
         <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 shadow-2xl">
           {[
-            { key: 'WDL', label: '승무패 (14G)' },
-            { key: 'SPECIAL', label: '스페셜' },
+            { key: 'WDL', label: 'WDL (14G)' },
+            { key: 'SPECIAL', label: 'Special' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -81,7 +81,7 @@ export default function TotoPage() {
                 <div>
                     <h4 className="text-xs font-black text-blue-300 uppercase tracking-widest mb-1">Active Batch Round</h4>
                     <p className="text-[11px] font-medium text-slate-400">
-                        현재 <strong className="text-blue-400 italic font-black">제 260014회차</strong> {subTab === 'WDL' ? '승무패 14경기' : '스페셜 경기'}가 업데이트 되었습니다.
+                        Round <strong className="text-blue-400 italic font-black">260014</strong> {subTab === 'WDL' ? 'WDL 14 matches' : 'Special matches'} have been updated.
                     </p>
                 </div>
             </div>

@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BetmanPRO - 실시간 스포츠 분석 대시보드",
-  description: "배트맨 프로토 & 토토 실시간 배당 분석 및 라이브 스코어 통합 서비스",
+  title: "TomatoScore - Live Football Scores & Analysis",
+  description: "Real-time football scores, live match tracking, odds analysis and betting insights from around the world.",
 };
 
 export default function RootLayout({
@@ -26,10 +26,15 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ko"
+      lang="en"
       className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
       <head>
+        {/* Google Fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        
         {/* 라이트모드 깜빡임 방지 */}
         <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('betman-theme')==='light')document.documentElement.classList.add('light')}catch(e){}` }} />
       </head>

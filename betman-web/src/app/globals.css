@@ -1,135 +1,229 @@
 @import "tailwindcss";
 
+/* ═══ TomatoScore Design System ═══ */
+
 :root {
-  --background: #030712;
-  --foreground: #f8fafc;
-  --bg-base: #030712;
-  --bg-card: #0d1425;
-  --text-primary: #ffffff;
+  /* Deep dark base with warm undertone */
+  --background: #0a0a0f;
+  --foreground: #f0f0f5;
+  --bg-base: #0a0a0f;
+  --bg-card: #13131a;
+  --bg-card-hover: #1a1a24;
+  --text-primary: #e8e8ef;
+  --text-secondary: #8b8b9e;
+  --text-muted: #55556a;
+
+  /* TomatoScore brand palette */
+  --tomato: #ff4444;
+  --tomato-light: #ff6b6b;
+  --tomato-dark: #cc2222;
+  --tomato-glow: rgba(255, 68, 68, 0.15);
+  --leaf: #22c55e;
+  --leaf-dark: #16a34a;
+  --stem: #4ade80;
+
+  /* Accent */
+  --accent: #ff4444;
+  --accent-soft: rgba(255, 68, 68, 0.1);
 }
 
 html.light {
-  --bg-base: #f0f4f8;
+  --bg-base: #f5f0eb;
   --bg-card: #ffffff;
-  --text-primary: #111827;
+  --bg-card-hover: #faf7f4;
+  --text-primary: #1a1a1f;
+  --text-secondary: #6b6b7b;
+  --text-muted: #9b9bab;
 }
+
+/* ═══ Google Font ═══ */
 
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   scrollbar-width: thin;
-  scrollbar-color: #334155 #030712;
+  scrollbar-color: #333 #0a0a0f;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html.light body {
-  scrollbar-color: #94a3b8 #e2e8f0;
+  scrollbar-color: #bbb #f5f0eb;
 }
 
-/* Custom Scrollbar for Chrome/Safari */
-::-webkit-scrollbar {
-  width: 6px;
-}
+/* ═══ Custom Scrollbar ═══ */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0a0a0f; }
+::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: #555; }
 
-::-webkit-scrollbar-track {
-  background: #030712;
-}
+html.light ::-webkit-scrollbar-track { background: #f5f0eb; }
+html.light ::-webkit-scrollbar-thumb { background: #ccc; }
 
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* Global Smooth Animations */
+/* ═══ Global Animations ═══ */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+@keyframes tomatoBounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.15) rotate(-5deg); }
+  50% { transform: scale(1.05) rotate(3deg); }
+  75% { transform: scale(1.1) rotate(-2deg); }
 }
 
-/* Glassmorphism Classes */
+@keyframes tomatoPulse {
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(255,68,68,0.3)); }
+  50% { filter: drop-shadow(0 0 12px rgba(255,68,68,0.6)); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes liveGlow {
+  0%, 100% { box-shadow: 0 0 4px rgba(255,68,68,0.2); }
+  50% { box-shadow: 0 0 16px rgba(255,68,68,0.4); }
+}
+
+.animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+.animate-tomato-bounce { animation: tomatoBounce 0.6s ease-in-out; }
+.animate-tomato-pulse { animation: tomatoPulse 2s ease-in-out infinite; }
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 30%, rgba(255,68,68,0.08) 50%, transparent 70%);
+  background-size: 200% 100%;
+  animation: shimmer 3s ease infinite;
+}
+.animate-live-glow { animation: liveGlow 1.5s ease-in-out infinite; }
+
+/* ═══ Glassmorphism ═══ */
 .glass {
   background: rgba(255, 255, 255, 0.03);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.glass-indigo {
-  background: rgba(79, 70, 229, 0.1);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(79, 70, 229, 0.1);
+.glass-tomato {
+  background: rgba(255, 68, 68, 0.06);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 68, 68, 0.1);
 }
 
-/* ── 라이트 모드 오버라이드 ──────────────────────────────────────── */
-html.light ::-webkit-scrollbar-track { background: #e2e8f0; }
-html.light ::-webkit-scrollbar-thumb { background: #94a3b8; }
+/* ═══ TomatoScore Logo Styles ═══ */
+.tomato-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
 
-/* ── 주요 텍스트: 밝은 배경에서 가시성 확보 ── */
-html.light .text-white    { color: #111827; }
-html.light .text-slate-100 { color: #1f2937; }
-html.light .text-slate-200 { color: #1f2937; }
-html.light .text-slate-300 { color: #1f2937; }
-html.light .text-slate-400 { color: #374151; }
-html.light .text-slate-500 { color: #4b5563; }
-html.light .text-slate-600 { color: #6b7280; }
-html.light .text-slate-700 { color: #9ca3af; }
+.tomato-logo:hover .tomato-icon {
+  animation: tomatoBounce 0.6s ease-in-out;
+}
 
-/* ── 강조색 텍스트: 밝은 배경에서 진하게 ── */
-html.light .text-indigo-300 { color: #4338ca; }
-html.light .text-indigo-400 { color: #4338ca; }
-html.light .text-purple-400 { color: #7c3aed; }
-html.light .text-sky-400    { color: #0284c7; }
-html.light .text-emerald-400 { color: #059669; }
-html.light .text-orange-400  { color: #d97706; }
-html.light .text-amber-500   { color: #b45309; }
-html.light .text-red-400     { color: #dc2626; }
-html.light .text-yellow-400  { color: #d97706; }
-html.light .text-blue-400    { color: #2563eb; }
+.tomato-logo:hover .tomato-text {
+  letter-spacing: -0.02em;
+}
 
-/* ── 컬러 배경(버튼/카드) 내부 텍스트는 원본 유지 ── */
-/* 같은 요소에 컬러 bg + text-white */
+.tomato-text {
+  background: linear-gradient(135deg, #ff4444, #ff6b6b, #ff4444);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 4s ease infinite;
+}
+
+/* ═══ Dark Mode Enhanced Visibility ═══ */
+
+/* Base text hierarchy - MUCH better contrast */
+.text-white { color: #f0f0f5 !important; }
+
+/* Card styling */
+.card-tomato {
+  background: var(--bg-card);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 1rem;
+  transition: all 0.2s ease;
+}
+
+.card-tomato:hover {
+  background: var(--bg-card-hover);
+  border-color: rgba(255, 68, 68, 0.15);
+  box-shadow: 0 4px 24px rgba(255, 68, 68, 0.05);
+}
+
+/* ═══ Light Mode Overrides ═══ */
+
+/* Text visibility in light mode */
+html.light .text-white    { color: #1a1a1f !important; }
+html.light .text-slate-100 { color: #1f2937 !important; }
+html.light .text-slate-200 { color: #1f2937 !important; }
+html.light .text-slate-300 { color: #374151 !important; }
+html.light .text-slate-400 { color: #4b5563 !important; }
+html.light .text-slate-500 { color: #6b7280 !important; }
+html.light .text-slate-600 { color: #8b8b9e !important; }
+html.light .text-slate-700 { color: #a3a3b5 !important; }
+
+/* Accent colors in light mode */
+html.light .text-indigo-300 { color: #4338ca !important; }
+html.light .text-indigo-400 { color: #4338ca !important; }
+html.light .text-purple-400 { color: #7c3aed !important; }
+html.light .text-sky-400    { color: #0284c7 !important; }
+html.light .text-emerald-400 { color: #059669 !important; }
+html.light .text-orange-400  { color: #d97706 !important; }
+html.light .text-amber-500   { color: #b45309 !important; }
+html.light .text-red-400     { color: #dc2626 !important; }
+html.light .text-yellow-400  { color: #d97706 !important; }
+html.light .text-blue-400    { color: #2563eb !important; }
+
+/* Colored bg button text stays white */
 html.light .bg-indigo-500.text-white { color: white !important; }
 html.light .bg-indigo-600.text-white { color: white !important; }
 html.light .bg-red-500.text-white    { color: white !important; }
 html.light .bg-emerald-500.text-white { color: white !important; }
 
-/* 컬러 배경 컨테이너 내부 자식 */
+/* Colored container children */
 html.light .bg-indigo-600 .text-white  { color: white !important; }
 html.light .bg-indigo-600 .text-white\/80 { color: rgba(255,255,255,0.8) !important; }
 html.light .bg-indigo-600 .text-white\/60 { color: rgba(255,255,255,0.6) !important; }
 html.light .bg-indigo-600 .text-white\/50 { color: rgba(255,255,255,0.5) !important; }
 html.light .bg-indigo-600 .text-slate-400 { color: rgba(255,255,255,0.7) !important; }
-html.light .bg-indigo-600 .text-indigo-300 { color: #a5b4fc !important; }
-html.light .bg-indigo-600 .text-red-400    { color: #fca5a5 !important; }
-html.light .bg-indigo-600 .text-orange-400 { color: #fdba74 !important; }
-html.light .bg-indigo-600 .text-emerald-400 { color: #6ee7b7 !important; }
-html.light .bg-indigo-600 .text-sky-400    { color: #7dd3fc !important; }
 
-/* ── 투명도 배경/보더 오버라이드 ── */
-html.light .border-white\/5  { border-color: rgba(0,0,0,0.09); }
-html.light .border-white\/10 { border-color: rgba(0,0,0,0.13); }
-html.light .bg-white\/5      { background-color: rgba(0,0,0,0.04); }
-html.light .bg-white\/10     { background-color: rgba(0,0,0,0.07); }
-html.light .bg-black\/20     { background-color: rgba(0,0,0,0.05); }
-html.light .bg-black\/30     { background-color: rgba(0,0,0,0.07); }
-html.light .bg-black\/40     { background-color: rgba(0,0,0,0.08); }
-html.light .bg-black\/70     { background-color: rgba(0,0,0,0.45); }
+/* Border & BG opacity overrides */
+html.light .border-white\/5  { border-color: rgba(0,0,0,0.08) !important; }
+html.light .border-white\/10 { border-color: rgba(0,0,0,0.12) !important; }
+html.light .bg-white\/5      { background-color: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/10     { background-color: rgba(0,0,0,0.06) !important; }
+html.light .bg-black\/20     { background-color: rgba(0,0,0,0.04) !important; }
+html.light .bg-black\/30     { background-color: rgba(0,0,0,0.06) !important; }
+html.light .bg-black\/40     { background-color: rgba(0,0,0,0.07) !important; }
+html.light .bg-black\/70     { background-color: rgba(0,0,0,0.4) !important; }
 
-/* 반투명 컬러 배경 */
-html.light .bg-red-500\/10    { background-color: rgba(239,68,68,0.1); }
-html.light .bg-red-500\/20    { background-color: rgba(239,68,68,0.15); }
-html.light .bg-indigo-500\/10 { background-color: rgba(99,102,241,0.1); }
-html.light .bg-indigo-500\/20 { background-color: rgba(99,102,241,0.15); }
-html.light .bg-amber-500\/10  { background-color: rgba(245,158,11,0.1); }
-html.light .bg-emerald-500\/20 { background-color: rgba(16,185,129,0.15); }
+/* Semi-transparent colored BGs */
+html.light .bg-red-500\/10    { background-color: rgba(239,68,68,0.08) !important; }
+html.light .bg-red-500\/20    { background-color: rgba(239,68,68,0.12) !important; }
+html.light .bg-indigo-500\/10 { background-color: rgba(99,102,241,0.08) !important; }
+html.light .bg-indigo-500\/20 { background-color: rgba(99,102,241,0.12) !important; }
+html.light .bg-amber-500\/10  { background-color: rgba(245,158,11,0.08) !important; }
+html.light .bg-emerald-500\/20 { background-color: rgba(16,185,129,0.12) !important; }
 
-/* ── 배경 글로우 억제 ── */
-html.light .bg-indigo-600\/10 { background-color: rgba(79,70,229,0.04); }
-html.light .bg-purple-600\/10 { background-color: rgba(147,51,234,0.04); }
+/* Suppress glows in light */
+html.light .bg-indigo-600\/10 { background-color: rgba(79,70,229,0.03) !important; }
+html.light .bg-purple-600\/10 { background-color: rgba(147,51,234,0.03) !important; }
+
+/* Tomato text in light mode */
+html.light .tomato-text {
+  background: linear-gradient(135deg, #cc2222, #ff4444, #cc2222);
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* No scrollbar horizontal */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

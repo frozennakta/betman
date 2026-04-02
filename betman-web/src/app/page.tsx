@@ -22,10 +22,10 @@ function dateLabel(isoDate: string): string {
   const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const nDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   const diff = Math.round((dDay - nDay) / 86400000);
-  if (diff === -1) return '어제';
-  if (diff === 0) return '오늘';
-  if (diff === 1) return '내일';
-  return d.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'short' });
+  if (diff === -1) return 'Yesterday';
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
 }
 
 function makeGroups(games: any[], key: SortKey, reversed = false) {
@@ -86,13 +86,12 @@ export default function HomePage() {
   // ── 날짜 필터 (-1=어제 ~ +6=6일후) ──────────────────────────────────────
   const [dateOffset, setDateOffset] = useState(0);
   const offsetLabel = (offset: number) => {
-    if (offset === -1) return '어제';
-    if (offset === 0)  return '오늘';
-    if (offset === 1)  return '내일';
-    if (offset === 2)  return '모레';
+    if (offset === -1) return 'Yesterday';
+    if (offset === 0)  return 'Today';
+    if (offset === 1)  return 'Tomorrow';
     const d = new Date();
     d.setDate(d.getDate() + offset);
-    return d.toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric', weekday: 'short' });
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' });
   };
 
   // ── 알림 ─────────────────────────────────────────────────────────────────
@@ -135,7 +134,7 @@ export default function HomePage() {
               const prev = prevStatusRef.current[g.id];
               const LIVE_SET = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
               if (prev === 'PENDING' && LIVE_SET.has(g.rawStatus)) {
-                new Notification(`🔴 ${g.homeTeam} vs ${g.awayTeam} 경기 시작!`, {
+                new Notification(`🔴 ${g.homeTeam} vs ${g.awayTeam} - Match Started!`, {
                   body: `${g.country} · ${g.league}`,
                   tag: g.id,
                 });
@@ -146,11 +145,11 @@ export default function HomePage() {
           newGames.forEach(g => { prevStatusRef.current[g.id] = g.liveStatus ?? g.rawStatus; });
           setGames(newGames);
           setInitialLoading(false);
-          setLastUpdated(new Date(res.data.lastUpdated || Date.now()).toLocaleTimeString());
+          setLastUpdated(new Date(res.data.lastUpdated || Date.now()).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
         }
       }
     } catch (e) {
-      console.error('데이터 로드 실패:', e);
+      console.error('Failed to load data:', e);
     } finally {
       setLoading(false);
     }
@@ -289,8 +288,8 @@ export default function HomePage() {
         >
           <Zap className="w-8 h-8 text-white" />
         </motion.div>
-        <h2 className="text-2xl font-black text-white mb-2 tracking-tighter">데이터 동기화 중</h2>
-        <p className="text-slate-400 font-medium">잠시만 기다려 주세요.</p>
+        <h2 className="text-2xl font-black text-white mb-2 tracking-tighter">Syncing Data</h2>
+        <p className="text-slate-400 font-medium">Please wait a moment.</p>
         <div className="mt-8 w-48 h-1 bg-white/5 rounded-full overflow-hidden">
           <motion.div animate={{ x: [-100, 200] }} transition={{ duration: 1.5, repeat: Infinity }} className="w-24 h-full bg-indigo-500" />
         </div>
@@ -320,7 +319,7 @@ export default function HomePage() {
               <input
                 ref={searchRef}
                 type="text"
-                placeholder='팀, 리그, 국가 검색... ( / )'
+                placeholder='Search teams, leagues, countries... ( / )'
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="w-full bg-white/5 border border-white/5 text-white text-xs font-medium pl-8 pr-8 py-2 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/10 transition-all placeholder:text-slate-600"
@@ -337,9 +336,9 @@ export default function HomePage() {
 
             {/* 상태 바 */}
             <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 shrink-0">
-              <span>총 <span className="text-white">{games.length}</span>경기</span>
+              <span>Total <span className="text-white">{games.length}</span> matches</span>
               <span className="text-slate-700">·</span>
-              <span>갱신 <span className="text-indigo-400">{lastUpdated || '--:--:--'}</span></span>
+              <span>Updated <span className="text-indigo-400">{lastUpdated || '--:--:--'}</span></span>
               <span className="text-slate-700">·</span>
               <span className="flex items-center gap-1">
                 <span className={`w-1.5 h-1.5 rounded-full ${countdown <= 5 ? 'bg-orange-400 animate-ping' : 'bg-slate-600'}`} />
@@ -351,7 +350,7 @@ export default function HomePage() {
             <div className="flex items-center gap-2 ml-auto shrink-0">
               <button
                 onClick={toggleNotif}
-                title={notifEnabled ? '알림 끄기' : '경기 시작 알림 켜기'}
+                title={notifEnabled ? 'Turn off notifications' : 'Turn on match start notifications'}
                 className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border transition-all ${
                   notifEnabled
                     ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 hover:bg-indigo-500/30'
@@ -364,7 +363,7 @@ export default function HomePage() {
               <button
                 onClick={toggleTheme}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all text-slate-400 hover:text-white"
-                title={isLight ? '다크 모드로 전환' : '라이트 모드로 전환'}
+                title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
               >
                 {isLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
                 <span className="text-[10px] font-black">{isLight ? 'DARK' : 'LIGHT'}</span>
@@ -376,7 +375,7 @@ export default function HomePage() {
           <div className="mt-4 space-y-2">
             {/* 종료경기 날짜 선택 + 필터 버튼 한 줄 */}
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest shrink-0">종료</span>
+              <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest shrink-0">FT</span>
               <button
                 onClick={() => setDateOffset(v => Math.max(v - 1, -1))}
                 disabled={dateOffset <= -1}
@@ -443,7 +442,7 @@ export default function HomePage() {
                             : 'bg-white/5 border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
                         }`}
                       >
-                        전체 <span className="opacity-60">{games.length}</span>
+                        All <span className="opacity-60">{games.length}</span>
                       </button>
                       {countryGroups.map(cg => (
                         <button
@@ -515,7 +514,7 @@ export default function HomePage() {
               <section className="mb-12">
                 <div className="flex items-center gap-3 mb-4">
                   <Star className="w-5 h-5 text-amber-400 fill-amber-400" />
-                  <h2 className="text-xl font-black text-white tracking-tight">즐겨찾기</h2>
+                  <h2 className="text-xl font-black text-white tracking-tight">Favorites</h2>
                   <span className="bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg text-[10px] font-black text-amber-400">
                     {favoriteGames.length}
                   </span>
@@ -545,9 +544,9 @@ export default function HomePage() {
                       <div className="w-3 h-3 bg-red-500 rounded-full animate-ping absolute" />
                       <div className="w-3 h-3 bg-red-500 rounded-full" />
                     </div>
-                    <h2 className="text-xl font-black text-white uppercase tracking-tight">라이브</h2>
+                    <h2 className="text-xl font-black text-white uppercase tracking-tight">Live</h2>
                     <span className="px-2 py-0.5 bg-red-500/10 border border-red-500/20 rounded-full text-[10px] font-black text-red-400">
-                      {liveGames.length}경기 진행 중
+                      {liveGames.length} live
                     </span>
                   </div>
                   <div className="grid gap-3">
@@ -569,7 +568,7 @@ export default function HomePage() {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
                     <Flame className="w-6 h-6 text-orange-400" />
-                    <h2 className="text-xl font-black text-white tracking-tight">예정 경기</h2>
+                    <h2 className="text-xl font-black text-white tracking-tight">Upcoming</h2>
                     <span className="bg-white/5 px-2 py-0.5 rounded-lg text-[10px] font-black text-slate-400">
                       {upcomingGames.length}
                     </span>
@@ -577,7 +576,7 @@ export default function HomePage() {
                   {/* 정렬 버튼 */}
                   <div className="flex items-center gap-1 bg-white/5 rounded-xl p-1 border border-white/5">
                     <ArrowUpDown className="w-3 h-3 text-slate-600 ml-1.5" />
-                    {([['time','시간'], ['league','리그'], ['country','국가']] as [SortKey,string][]).map(([key, label]) => (
+                    {([['time','Time'], ['league','League'], ['country','Country']] as [SortKey,string][]).map(([key, label]) => (
                       <button
                         key={key}
                         onClick={() => setSortKey(key)}
@@ -605,7 +604,7 @@ export default function HomePage() {
                             <Calendar className="w-3.5 h-3.5 text-slate-600 shrink-0" />
                             <div className="h-px flex-1 bg-white/5" />
                             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest shrink-0 group-hover:text-slate-300 transition-colors">
-                              {group.label} · {group.games.length}경기
+                              {group.label} · {group.games.length} matches
                             </span>
                             <div className="h-px flex-1 bg-white/5" />
                             {collapsed
@@ -643,12 +642,12 @@ export default function HomePage() {
                   </div>
                 ) : (
                   <div className="p-20 text-center bg-[var(--bg-card)] rounded-3xl border border-white/5 border-dashed">
-                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)', opacity: 0.4 }}>탐색된 경기가 없습니다.</p>
+                    <p className="text-sm font-bold" style={{ color: 'var(--text-primary)', opacity: 0.4 }}>No matches found.</p>
                     <button
                       onClick={() => { setSearchTerm(''); setLeagueFilter(''); }}
                       className="mt-4 text-xs font-black text-indigo-400 hover:text-indigo-300 underline underline-offset-4"
                     >
-                      필터 초기화
+                      Reset Filters
                     </button>
                   </div>
                 )}
@@ -660,7 +659,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <div className="w-3 h-3 bg-slate-600 rounded-full" />
-                      <h2 className="text-xl font-black text-slate-500 tracking-tight">종료된 경기</h2>
+                      <h2 className="text-xl font-black text-slate-500 tracking-tight">Finished</h2>
                       <span className="bg-white/5 px-2 py-0.5 rounded-lg text-[10px] font-black text-slate-600">
                         {finishedGames.length}
                       </span>
@@ -678,7 +677,7 @@ export default function HomePage() {
                             <Calendar className="w-3.5 h-3.5 text-slate-700 shrink-0" />
                             <div className="h-px flex-1 bg-white/5" />
                             <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest shrink-0 group-hover:text-slate-400 transition-colors">
-                              {group.label} 종료 · {group.games.length}경기
+                              {group.label} finished · {group.games.length} matches
                             </span>
                             <div className="h-px flex-1 bg-white/5" />
                             {collapsed
@@ -737,7 +736,7 @@ export default function HomePage() {
               className="flex items-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-400 rounded-2xl shadow-xl shadow-red-500/30 text-white text-sm font-black transition-colors"
             >
               <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-              라이브 {liveGames.length}경기
+              Live {liveGames.length}
             </motion.button>
           )}
         </AnimatePresence>

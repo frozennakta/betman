@@ -182,7 +182,7 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
                   <button
                     onClick={e => { e.stopPropagation(); onToggleFav(game.id); }}
                     className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-                    title={isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}
+                    title={isFavorite ? 'Remove favorite' : 'Add to favorites'}
                   >
                     <Star className={`w-3.5 h-3.5 transition-colors ${isFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600'}`} />
                   </button>
@@ -197,13 +197,13 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
         {!compact && game.homeOdds != null && (
           <div className="flex items-center gap-1.5">
             <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-indigo-400">
-              홈 {game.homeOdds}
+              H {game.homeOdds}
             </span>
             <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-slate-400">
-              무 {game.drawOdds}
+              D {game.drawOdds}
             </span>
             <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-orange-400">
-              원 {game.awayOdds}
+              A {game.awayOdds}
             </span>
           </div>
         )}
