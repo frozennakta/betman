@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Loader2, ArrowLeft, Star, MapPin, User } from 'lucide-react';
+import { Loader2, ArrowLeft, Star, MapPin, User, Thermometer, Wind } from 'lucide-react';
 import {
   countryFlag, STATUS_LABEL,
   AnalysisTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab
@@ -304,34 +304,67 @@ export default function MatchPage() {
 
           {/* 매치 메타 정보 + 날씨 */}
           {(analysis?.round || analysis?.season || game.venue?.name || game.referee || weather) && (
-            <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap gap-x-4 gap-y-2">
-              {analysis?.round && (
-                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                  <span className="text-slate-600">🏆</span> {analysis.round}
-                </span>
+            <div className="mt-4 pt-3 border-t border-white/5 space-y-3">
+
+              {/* Round / Season / Referee 소형 칩 */}
+              {(analysis?.round || analysis?.season || game.referee) && (
+                <div className="flex flex-wrap gap-2">
+                  {analysis?.round && (
+                    <span className="text-[11px] font-bold text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                      🏆 {analysis.round}
+                    </span>
+                  )}
+                  {analysis?.season && (
+                    <span className="text-[11px] font-bold text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                      📅 {analysis.season}
+                    </span>
+                  )}
+                  {game.referee && (
+                    <span className="text-[11px] font-bold text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg flex items-center gap-1.5 min-w-0">
+                      <User className="w-3 h-3 text-slate-500 shrink-0" />
+                      <span className="truncate">{game.referee}</span>
+                    </span>
+                  )}
+                </div>
               )}
-              {analysis?.season && (
-                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
-                  <span className="text-slate-600">📅</span> {analysis.season}
-                </span>
-              )}
-              {game.venue?.name && (
-                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 min-w-0">
-                  <MapPin className="w-3 h-3 text-slate-600 shrink-0" />
-                  <span className="truncate">{game.venue.name}{game.venue.city ? ` · ${game.venue.city}` : ''}</span>
-                </span>
-              )}
-              {game.referee && (
-                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 min-w-0">
-                  <User className="w-3 h-3 text-slate-600 shrink-0" />
-                  <span className="truncate">{game.referee}</span>
-                </span>
-              )}
-              {weather && (
-                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                  <span>{weather.emoji}</span>
-                  <span>{weather.temp}°C · {weather.wind} km/h</span>
-                </span>
+
+              {/* 구장 + 날씨 메인 블록 */}
+              {(game.venue?.name || weather) && (
+                <div className="flex items-center justify-between gap-3 bg-white/[0.04] rounded-2xl px-4 py-3 border border-white/5">
+                  {/* 왼쪽: 도시 + 구장명 */}
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <MapPin className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      {game.venue?.city && (
+                        <div className="text-[13px] font-black text-white leading-tight truncate">
+                          {game.venue.city}
+                        </div>
+                      )}
+                      {game.venue?.name && (
+                        <div className="text-[11px] font-medium text-slate-500 leading-tight truncate mt-0.5">
+                          {game.venue.name}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 오른쪽: 날씨 */}
+                  {weather && (
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-2xl">{weather.emoji}</span>
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-300">
+                          <Thermometer className="w-3.5 h-3.5 text-orange-400" />
+                          {weather.temp}°C
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-400">
+                          <Wind className="w-3.5 h-3.5 text-sky-400" />
+                          {weather.wind} km/h
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
