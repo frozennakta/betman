@@ -5,15 +5,19 @@ type Theme = {
   isLight: boolean; toggle: () => void;
   isTomatoMode: boolean; toggleMode: () => void;
 };
-const ThemeContext = createContext<Theme>({ isLight: false, toggle: () => {}, isTomatoMode: true, toggleMode: () => {} });
+const ThemeContext = createContext<Theme>({ isLight: true, toggle: () => {}, isTomatoMode: true, toggleMode: () => {} });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isLight, setIsLight] = useState(false);
+  const [isLight, setIsLight] = useState(true);
   const [isTomatoMode, setIsTomatoMode] = useState(true);
 
   useEffect(() => {
     const saved = localStorage.getItem('betman-theme');
-    if (saved === 'light') {
+    if (saved === 'dark') {
+      setIsLight(false);
+      document.documentElement.classList.remove('light');
+    } else {
+      // 저장값 없으면(첫 방문) 또는 'light'이면 라이트모드
       setIsLight(true);
       document.documentElement.classList.add('light');
     }
