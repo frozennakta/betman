@@ -149,15 +149,19 @@ function startWorkers() {
 startWorkers();
 
 export async function GET() {
-  // 첫 번째 liveWorker 실행 전 → 로딩 화면
+  // 서버리스 환경: 초기화 안 됐으면 직접 fetch (워커가 죽어있어도 동작)
   if (!store.initialized) {
-    return NextResponse.json({
-      success: true,
-      games: [],
-      status: 'LOADING_INITIAL',
-      message: 'Loading initial data. Please refresh shortly.',
-    });
+    try {
+      store.todayFixtures = await fetchTodayFixtures();
+      const live = await fetchLiveFixtures();
+      store.games = merge(store.todayFixtures, live).map(normalizeGame);
+      store.lastUpdated = Date.now();
+    } catch (e) {
+      console.error('❌ [Init] direct fetch 실패:', e);
+    }
+    store.initialized = true;
   }
+
   return NextResponse.json({
     success: true,
     games: store.games,
