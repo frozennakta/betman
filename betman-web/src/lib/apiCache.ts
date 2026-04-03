@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
 
-const CACHE_DIR = path.join(process.cwd(), '.api-cache');
+const CACHE_DIR = process.env.NODE_ENV === 'development'
+  ? path.join(process.cwd(), '.api-cache')
+  : '/tmp/.api-cache';
 
 function ensureDir() {
   if (!fs.existsSync(CACHE_DIR)) fs.mkdirSync(CACHE_DIR, { recursive: true });

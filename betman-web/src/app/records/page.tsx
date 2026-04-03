@@ -65,7 +65,7 @@ export default function MatchResultsPage() {
               className="w-full bg-white/5 border border-white/5 text-xs font-bold pl-10 pr-4 py-3 rounded-xl focus:outline-none focus:border-amber-500/50 transition-all text-white"
             />
           </div>
-          <div className="flex bg-slate-900/50 p-1 rounded-xl border border-white/5 w-full sm:w-auto">
+          <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl w-full sm:w-auto">
             {[
               { key: 'ALL', label: 'All' },
               { key: 'PROTO', label: 'Proto' },

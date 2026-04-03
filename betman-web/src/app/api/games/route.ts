@@ -116,13 +116,13 @@ function startWorkers() {
       } catch (e) {
         console.error('❌ [Today] / [Odds] 오류:', e);
       }
-      // 0경기면 API 실패 가능성 → 2분 후 재시도, 성공하면 4시간 대기 (배당 변동 캐치)
-      const delay = count > 0 ? 4 * 60 * 60 * 1000 : 2 * 60 * 1000;
+      // 0경기면 API 실패 또는 할당량 초과 가능성 → 10분 후 재시도, 성공하면 6시간 대기
+      const delay = count > 0 ? 6 * 60 * 60 * 1000 : 10 * 60 * 1000;
       await new Promise(r => setTimeout(r, delay));
     }
   };
 
-  // ── Worker 2: 라이브 스코어 — 20분마다 ────────────────────────────────
+  // ── Worker 2: 라이브 스코어 — 30분마다 ────────────────────────────────
   const liveWorker = async () => {
     // todayWorker가 첫 번째 API 응답을 받을 때까지 대기
     await new Promise(r => setTimeout(r, 12000));
@@ -132,13 +132,13 @@ function startWorkers() {
         const merged = merge(store.todayFixtures, live);
         store.games = merged.map(normalizeGame);
         store.lastUpdated = Date.now();
-        console.log(`⚡ [Live] 라이브 ${live.length}개 · 총 ${store.games.length}경기`);
+        console.log(`⚡ [Live] 라이브 ${live.length}개 · 총 ${store.games.length}경기 (Next sync: 30분 후)`);
       } catch (e) {
         console.error('❌ [Live] 오류:', e);
       }
       // 성공/실패 모두 initialized = true (빈 배열이어도 로딩 화면 탈출)
       store.initialized = true;
-      await new Promise(r => setTimeout(r, 20 * 60 * 1000));
+      await new Promise(r => setTimeout(r, 30 * 60 * 1000));
     }
   };
 

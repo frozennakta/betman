@@ -105,7 +105,7 @@ function toKSTDateStr(offsetDays: number): string {
  * - 기본: 어제(-1) ~ 6일 후(+6) = 8일치, 8 req/호출
  * - 6시간마다 갱신 → 32 req/day
  */
-export async function fetchTodayFixtures(pastDays = 1, futureDays = 7): Promise<LiveMatch[]> {
+export async function fetchTodayFixtures(pastDays = 0, futureDays = 1): Promise<LiveMatch[]> {
   if (!process.env.API_FOOTBALL_KEY) {
     console.warn('[LiveScore] API_FOOTBALL_KEY 없음 → 빈 배열 반환');
     return [];

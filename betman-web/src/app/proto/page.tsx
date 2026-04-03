@@ -35,7 +35,7 @@ export default function ProtoPage() {
     : games.filter(g => activeTab === 'WIN_LOSS' ? !g.type.includes('SPECIAL') : g.type.includes('SPECIAL'));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 bg-[#030712]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 bg-[var(--bg-base)]">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
@@ -48,7 +48,7 @@ export default function ProtoPage() {
           <p className="text-slate-400 font-medium">Real-time odds analysis & AI-powered data center (auto-update)</p>
         </div>
 
-        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 shadow-2xl">
+        <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl">
           {[
             { key: 'ALL', label: 'All' },
             { key: 'WIN_LOSS', label: 'Win/Loss' },

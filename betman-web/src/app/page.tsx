@@ -128,19 +128,7 @@ export default function HomePage() {
           setInitialLoading(true);
         } else {
           const newGames: any[] = res.data.games;
-          // 알림: PENDING → LIVE 전환 감지
-          if (notifEnabled && Notification.permission === 'granted') {
-            newGames.forEach(g => {
-              const prev = prevStatusRef.current[g.id];
-              const LIVE_SET = new Set(['1H','HT','2H','ET','BT','P','INT','LIVE','SUSP']);
-              if (prev === 'PENDING' && LIVE_SET.has(g.rawStatus)) {
-                new Notification(`🔴 ${g.homeTeam} vs ${g.awayTeam} - Match Started!`, {
-                  body: `${g.country} · ${g.league}`,
-                  tag: g.id,
-                });
-              }
-            });
-          }
+          // ── 경기 시작 알림 기능 제거됨 ──
           // 현재 상태 기록
           newGames.forEach(g => { prevStatusRef.current[g.id] = g.liveStatus ?? g.rawStatus; });
           setGames(newGames);
@@ -519,7 +507,7 @@ export default function HomePage() {
                     {favoriteGames.length}
                   </span>
                 </div>
-                <div className="grid gap-2">
+                <div className="grid gap-1">
                   {favoriteGames.map(g => (
                     <MatchCard
                       key={g.id}
@@ -549,7 +537,7 @@ export default function HomePage() {
                       {liveGames.length} live
                     </span>
                   </div>
-                  <div className="grid gap-3">
+                  <div className="grid gap-1">
                     {liveGames.map(game => (
                       <MatchCard
                         key={game.id}
@@ -622,7 +610,7 @@ export default function HomePage() {
                                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                                 className="overflow-hidden"
                               >
-                                <div className="grid gap-2">
+                                <div className="grid gap-1">
                                   {group.games.map((g: any) => (
                                     <MatchCard
                                       key={g.id}

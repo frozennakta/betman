@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, LayoutGrid, Layers, BarChart3, Menu, X, Trophy, BookOpen } from 'lucide-react';
+import { Home, LayoutGrid, Layers, BarChart3, Menu, X, Trophy, BookOpen, Sun, Moon } from 'lucide-react';
 import { useState } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 
 const NavItems = [
   { href: '/', label: 'Home', icon: Home, color: 'text-red-400' },
@@ -19,42 +20,34 @@ const NavItems = [
 function TomatoIcon({ className = '' }: { className?: string }) {
   return (
     <svg viewBox="0 0 64 64" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Tomato body with gradient */}
       <defs>
-        <radialGradient id="tomatoGrad" cx="40%" cy="35%" r="55%">
-          <stop offset="0%" stopColor="#ff6b6b" />
-          <stop offset="50%" stopColor="#ff4444" />
-          <stop offset="100%" stopColor="#cc2222" />
+        <radialGradient id="tomatoBody" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ff4d4d" />
+          <stop offset="100%" stopColor="#cc0000" />
         </radialGradient>
-        <radialGradient id="highlight" cx="30%" cy="25%" r="30%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.35)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0)" />
-        </radialGradient>
+        <linearGradient id="latticeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.2)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+        </linearGradient>
       </defs>
-      {/* Shadow */}
-      <ellipse cx="32" cy="58" rx="18" ry="4" fill="rgba(0,0,0,0.15)" />
-      {/* Tomato body */}
-      <ellipse cx="32" cy="36" rx="24" ry="22" fill="url(#tomatoGrad)" />
-      {/* Highlight shine */}
-      <ellipse cx="24" cy="28" rx="10" ry="8" fill="url(#highlight)" />
-      {/* Stem */}
-      <path d="M32 14 C32 14 31 8 32 6 C33 4 33 4 32 6" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round" />
-      {/* Leaves */}
-      <path d="M28 16 C22 10 16 12 16 12 C16 12 18 18 24 18 Z" fill="#22c55e" />
-      <path d="M36 16 C42 10 48 12 48 12 C48 12 46 18 40 18 Z" fill="#22c55e" />
-      <path d="M30 15 C26 7 20 8 20 8 C20 8 22 14 28 16 Z" fill="#4ade80" opacity="0.7" />
-      <path d="M34 15 C38 7 44 8 44 8 C44 8 42 14 36 16 Z" fill="#4ade80" opacity="0.7" />
-      {/* Face - cute eyes */}
-      <ellipse cx="24" cy="35" rx="3" ry="3.5" fill="#1a1a1f" />
-      <ellipse cx="40" cy="35" rx="3" ry="3.5" fill="#1a1a1f" />
-      {/* Eye highlights */}
-      <ellipse cx="25.5" cy="33.5" rx="1.2" ry="1.4" fill="white" />
-      <ellipse cx="41.5" cy="33.5" rx="1.2" ry="1.4" fill="white" />
-      {/* Cheeky smile */}
-      <path d="M26 42 Q32 48 38 42" stroke="#1a1a1f" strokeWidth="2" strokeLinecap="round" fill="none" />
-      {/* Blush cheeks */}
-      <ellipse cx="18" cy="40" rx="4" ry="2.5" fill="rgba(255,150,150,0.4)" />
-      <ellipse cx="46" cy="40" rx="4" ry="2.5" fill="rgba(255,150,150,0.4)" />
+
+      {/* Main Tomato Shape - Slightly flattened like a professional ball */}
+      <circle cx="32" cy="34" r="26" fill="url(#tomatoBody)" />
+
+      {/* Soccer Ball Lattice Overlay (Concept #1: Football Integration) */}
+      <path d="M32 8 L32 20 M32 48 L32 60 M8 34 L20 34 M44 34 L56 34" stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+      
+      {/* Central Hexagon Pattern */}
+      <path d="M32 22 L40 28 L40 40 L32 46 L24 40 L24 28 Z" fill="rgba(0,0,0,0.15)" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" />
+      
+      {/* Surrounding Pentagon Segments */}
+      <path d="M32 22 L44 14 M40 28 L54 26 M40 40 L54 42 M32 46 L44 54 M24 40 L10 42 M24 28 L10 26 M32 22 L20 14" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" />
+
+      {/* Stem - Minimalist & Modern Crown Style */}
+      <path d="M32 8 C35 2 40 4 40 4 L34 10 L32 14 L30 10 L24 4 C24 4 29 2 32 8Z" fill="#00ff88" className="drop-shadow-[0_0_5px_rgba(0,255,136,0.5)]" />
+      
+      {/* Highlight Shine */}
+      <path d="M18 18 C14 24 14 36 18 42" stroke="rgba(255,255,255,0.25)" strokeWidth="3" strokeLinecap="round" fill="none" />
     </svg>
   );
 }
@@ -62,23 +55,24 @@ function TomatoIcon({ className = '' }: { className?: string }) {
 export default function Navbar() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { isTomatoMode, toggleMode } = useTheme();
 
   return (
-    <nav className="sticky top-0 z-[100] w-full border-b border-white/[0.06] bg-[#0a0a0f]/90 backdrop-blur-2xl">
+    <nav className="sticky top-0 z-[100] w-full border-b border-white/[0.06] bg-[var(--bg-base)]/90 backdrop-blur-2xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 sm:h-20 items-center justify-between">
           {/* ── Logo ── */}
-          <Link href="/" className="tomato-logo group">
-            <div className="tomato-icon w-9 h-9 sm:w-11 sm:h-11 animate-tomato-pulse transition-transform group-hover:scale-110">
-              <TomatoIcon className="w-full h-full drop-shadow-lg" />
+          <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6">
+              <TomatoIcon className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,0,0.3)]" />
             </div>
-            <div className="flex flex-col leading-none">
-              <span className="text-[22px] sm:text-[26px] font-black tracking-[-0.04em]">
-                <span className="text-[#f0f0f5]">tomato</span>
-                <span className="tomato-text">score</span>
+            <div className="flex flex-col leading-none border-l border-white/10 pl-2.5 sm:pl-3">
+              <span className="text-[24px] sm:text-[28px] font-black tracking-[-0.05em] uppercase italic">
+                <span className="text-white drop-shadow-md">tomato</span>
+                <span className="text-red-500 ml-1">score</span>
               </span>
-              <span className="text-[8px] font-bold tracking-[0.2em] uppercase text-[#55556a] mt-0.5 hidden sm:block">
-                Live Football Dashboard
+              <span className="text-[10px] font-black tracking-[0.3em] uppercase text-[#55556a] mt-1 hidden sm:block">
+                Global Sports Engine
               </span>
             </div>
           </Link>
@@ -111,14 +105,65 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* ── Mobile hamburger ── */}
-          <div className="md:hidden">
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              className="p-2 rounded-xl bg-white/[0.06] text-[#8b8b9e] hover:text-white transition-colors"
-            >
-              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+          {/* ── Desktop & Mobile Toggles ── */}
+          <div className="flex items-center gap-3">
+            {/* Tomato / Zen 스위치 */}
+            <div className="relative group">
+              <button
+                onClick={toggleMode}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-all border ${
+                  isTomatoMode 
+                    ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]' 
+                    : 'bg-white/5 border-white/10 text-slate-400 grayscale hover:grayscale-0'
+                }`}
+              >
+                <span className="text-sm">{isTomatoMode ? '🍅' : '🧘'}</span>
+                <span className="hidden sm:inline">{isTomatoMode ? 'Tomato' : 'Zen'}</span>
+              </button>
+
+              {/* Tooltip */}
+              <div className={`absolute top-full right-0 mt-3 w-64 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-[110]`}>
+                <div className={`rounded-2xl p-4 text-xs shadow-2xl ${
+                  isTomatoMode
+                    ? 'bg-[var(--bg-card)] border border-red-500/30 text-slate-300 ring-1 ring-red-500/10'
+                    : 'bg-white border border-zinc-200 text-slate-600 shadow-xl'
+                }`}>
+                  <div className="flex items-center gap-2.5 mb-2.5">
+                    <span className="text-xl leading-none">{isTomatoMode ? '🍅' : '🧘'}</span>
+                    <span className={`font-black text-[13px] uppercase tracking-wider ${isTomatoMode ? 'text-red-400' : 'text-slate-800'}`}>
+                      {isTomatoMode ? 'Tomato Mode' : 'Zen Mode'}
+                    </span>
+                  </div>
+                  <p className="leading-relaxed mb-3.5 opacity-90 font-medium">
+                    {isTomatoMode
+                      ? 'Experience sports with dark mode and dynamic goal celebration effects.'
+                      : 'Focused viewing experience with clean light theme for data analysis.'}
+                  </p>
+                  <div className={`flex items-center gap-1.5 pt-3 border-t ${isTomatoMode ? 'border-white/10 text-slate-500' : 'border-zinc-100 text-zinc-400'}`}>
+                    <span className="font-bold">Switch to</span>
+                    <span className={`px-2 py-0.5 rounded-md font-black ${
+                      isTomatoMode ? 'bg-indigo-500/20 text-indigo-400' : 'bg-red-500/10 text-red-500 font-black'
+                    }`}>
+                      {isTomatoMode ? 'Zen' : 'Tomato'}
+                    </span>
+                  </div>
+                </div>
+                {/* Tooltip Arrow */}
+                <div className={`absolute top-[-5px] right-5 w-2.5 h-2.5 rotate-45 ${
+                  isTomatoMode ? 'bg-[var(--bg-card)] border-l border-t border-red-500/30' : 'bg-white border-l border-t border-zinc-200'
+                }`} />
+              </div>
+            </div>
+
+            {/* ── Mobile hamburger ── */}
+            <div className="md:hidden flex items-center">
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-2 rounded-xl bg-white/[0.06] text-[#8b8b9e] hover:text-white transition-colors"
+              >
+                {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -130,7 +175,7 @@ export default function Navbar() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="md:hidden bg-[#0e0e16] border-b border-white/[0.06]"
+            className="md:hidden bg-[var(--bg-card)] border-b border-white/[0.06]"
           >
             <div className="px-4 py-6 space-y-2">
               {NavItems.map((item) => {

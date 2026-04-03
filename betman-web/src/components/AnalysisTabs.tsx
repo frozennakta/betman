@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { MapPin, User, Calendar, Trophy } from 'lucide-react';
+import { useEffect, useState, useRef } from 'react';
+import { MapPin, User, Calendar, Trophy, Send, MessageSquare } from 'lucide-react';
 
 export const STATUS_LABEL: Record<string, string> = {
   '1H': '1st Half', 'HT': 'Half Time', '2H': '2nd Half',
@@ -37,44 +37,97 @@ export function useLocalDateTime(isoDate: string | undefined) {
 }
 
 export function countryFlag(country: string): string {
+  if (!country) return '';
+  // 이미 2글자 ISO 코드인 경우 처리 (대소문자 무관)
+  if (country.length === 2) {
+    const code = country.toUpperCase();
+    if (/^[A-Z]{2}$/.test(code)) {
+      return [...code].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+    }
+  }
   const map: Record<string, string> = {
     Afghanistan:'AF', Albania:'AL', Algeria:'DZ', Argentina:'AR', Armenia:'AM',
     Australia:'AU', Austria:'AT', Azerbaijan:'AZ', Bahrain:'BH', Bangladesh:'BD',
-    Belarus:'BY', Belgium:'BE', Bolivia:'BO', Bosnia:'BA', Brazil:'BR',
-    Bulgaria:'BG', Cameroon:'CM', Canada:'CA', Chile:'CL', China:'CN',
-    Colombia:'CO', 'Costa Rica':'CR', Croatia:'HR', Cuba:'CU',
-    'Czech Republic':'CZ', Czechia:'CZ', Denmark:'DK', 'DR Congo':'CD',
-    Ecuador:'EC', Egypt:'EG', 'El Salvador':'SV', England:'GB',
-    Estonia:'EE', Ethiopia:'ET', Finland:'FI', France:'FR',
-    Georgia:'GE', Germany:'DE', Ghana:'GH', Greece:'GR',
-    Guatemala:'GT', Honduras:'HN', Hungary:'HU', Iceland:'IS',
-    India:'IN', Indonesia:'ID', Iran:'IR', Iraq:'IQ',
-    Ireland:'IE', Israel:'IL', Italy:'IT', Jamaica:'JM',
-    Japan:'JP', Jordan:'JO', Kazakhstan:'KZ', Kenya:'KE',
-    Kuwait:'KW', Latvia:'LV', Lebanon:'LB', Libya:'LY',
-    Lithuania:'LT', Luxembourg:'LU', Malaysia:'MY', Mali:'ML',
-    Malta:'MT', Mexico:'MX', Moldova:'MD', Montenegro:'ME',
-    Morocco:'MA', Netherlands:'NL', 'New Zealand':'NZ', Nicaragua:'NI',
-    Nigeria:'NG', 'North Korea':'KP', 'North Macedonia':'MK', Norway:'NO',
-    Oman:'OM', Pakistan:'PK', Panama:'PA', Paraguay:'PY',
-    Peru:'PE', Philippines:'PH', Poland:'PL', Portugal:'PT',
-    Qatar:'QA', Romania:'RO', Russia:'RU', 'Saudi Arabia':'SA',
-    Scotland:'GB', Senegal:'SN', Serbia:'RS', Singapore:'SG',
-    Slovakia:'SK', Slovenia:'SI', 'South Africa':'ZA', 'South Korea':'KR',
-    Spain:'ES', Sweden:'SE', Switzerland:'CH', Syria:'SY',
-    Thailand:'TH', Tunisia:'TN', Turkey:'TR', UAE:'AE',
-    Uganda:'UG', Ukraine:'UA', 'United Arab Emirates':'AE',
-    'United Kingdom':'GB', Uruguay:'UY', USA:'US', Uzbekistan:'UZ',
+    Belarus:'BY', Belgium:'BE', Bolivia:'BO', Bosnia:'BA', 'Bosnia and Herzegovina':'BA',
+    Brazil:'BR', Bulgaria:'BG', 'Burkina Faso':'BF', Cameroon:'CM', Canada:'CA',
+    Chile:'CL', China:'CN', Colombia:'CO', Congo:'CG', 'Costa Rica':'CR',
+    Croatia:'HR', Cuba:'CU', Cyprus:'CY', 'Czech Republic':'CZ', Czechia:'CZ',
+    Denmark:'DK', 'DR Congo':'CD', Ecuador:'EC', Egypt:'EG', 'El Salvador':'SV',
+    England:'GB', Estonia:'EE', Ethiopia:'ET', Finland:'FI', France:'FR',
+    Georgia:'GE', Germany:'DE', Ghana:'GH', Greece:'GR', Guatemala:'GT',
+    Honduras:'HN', 'Hong Kong':'HK', Hungary:'HU', Iceland:'IS', India:'IN',
+    Indonesia:'ID', Iran:'IR', Iraq:'IQ', Ireland:'IE', Israel:'IL',
+    Italy:'IT', 'Ivory Coast':'CI', Jamaica:'JM', Japan:'JP', Jordan:'JO',
+    Kazakhstan:'KZ', Kenya:'KE', Kosovo:'XK', Kuwait:'KW', Latvia:'LV',
+    Lebanon:'LB', Libya:'LY', Lithuania:'LT', Luxembourg:'LU', Malaysia:'MY',
+    Mali:'ML', Malta:'MT', Mexico:'MX', Moldova:'MD', Montenegro:'ME',
+    Morocco:'MA', Mozambique:'MZ', Netherlands:'NL', 'New Zealand':'NZ',
+    Nicaragua:'NI', Nigeria:'NG', 'North Korea':'KP', 'North Macedonia':'MK',
+    Norway:'NO', Oman:'OM', Pakistan:'PK', Palestine:'PS', Panama:'PA',
+    Paraguay:'PY', Peru:'PE', Philippines:'PH', Poland:'PL', Portugal:'PT',
+    Qatar:'QA', Romania:'RO', Russia:'RU', Rwanda:'RW', 'Saudi Arabia':'SA',
+    Scotland:'GB', Senegal:'SN', Serbia:'RS', Singapore:'SG', Slovakia:'SK',
+    Slovenia:'SI', 'South Africa':'ZA', 'South Korea':'KR', Spain:'ES',
+    Sweden:'SE', Switzerland:'CH', Syria:'SY', Taiwan:'TW', Tanzania:'TZ',
+    Thailand:'TH', Tunisia:'TN', Turkey:'TR', Uganda:'UG', Ukraine:'UA',
+    UAE:'AE', 'United Arab Emirates':'AE', 'United Kingdom':'GB',
+    Uruguay:'UY', USA:'US', 'United States':'US', Uzbekistan:'UZ',
     Venezuela:'VE', Vietnam:'VN', Wales:'GB', Yemen:'YE',
-    Zambia:'ZM', Zimbabwe:'ZW', 'Ivory Coast':'CI',
-    Kosovo:'XK', Cyprus:'CY', 'Trinidad and Tobago':'TT',
-    World:'🌍',
+    Zambia:'ZM', Zimbabwe:'ZW', 'Trinidad and Tobago':'TT',
+    World:'🌍', International:'🌍',
   };
-  if (country === 'World') return '🌍';
+  if (country === 'World' || country === 'International') return '🌍';
   const code = map[country];
   if (!code || code.length !== 2) return '';
   return [...code].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
 }
+
+export function getCountryDisplay(country: string): { flag: string; code: string } {
+  if (!country) return { flag: '', code: '---' };
+
+  const codeMap: Record<string, string> = {
+    Afghanistan:'AFG', Albania:'ALB', Algeria:'ALG', Argentina:'ARG', Armenia:'ARM',
+    Australia:'AUS', Austria:'AUT', Azerbaijan:'AZE', Bahrain:'BHR', Bangladesh:'BAN',
+    Belarus:'BLR', Belgium:'BEL', Bolivia:'BOL', Bosnia:'BIH', 'Bosnia and Herzegovina':'BIH',
+    Brazil:'BRA', Bulgaria:'BUL', Cameroon:'CMR', Canada:'CAN', Chile:'CHI',
+    China:'CHN', Colombia:'COL', 'Costa Rica':'CRC', Croatia:'CRO', Cuba:'CUB',
+    Cyprus:'CYP', 'Czech Republic':'CZE', Czechia:'CZE', Denmark:'DEN', Ecuador:'ECU',
+    Egypt:'EGY', 'El Salvador':'SLV', England:'ENG', Estonia:'EST', Ethiopia:'ETH',
+    Finland:'FIN', France:'FRA', Georgia:'GEO', Germany:'GER', Ghana:'GHA',
+    Greece:'GRE', Guatemala:'GUA', Honduras:'HON', 'Hong Kong':'HKG', Hungary:'HUN',
+    Iceland:'ISL', India:'IND', Indonesia:'IDN', Iran:'IRN', Iraq:'IRQ',
+    Ireland:'IRL', Israel:'ISR', Italy:'ITA', 'Ivory Coast':'CIV', Jamaica:'JAM',
+    Japan:'JPN', Jordan:'JOR', Kazakhstan:'KAZ', Kenya:'KEN', Kosovo:'KOS',
+    Kuwait:'KUW', Latvia:'LVA', Lebanon:'LBN', Lithuania:'LTU', Luxembourg:'LUX',
+    Malaysia:'MAS', Mali:'MLI', Malta:'MLT', Mexico:'MEX', Moldova:'MDA',
+    Montenegro:'MNE', Morocco:'MAR', Netherlands:'NED', 'New Zealand':'NZL',
+    Nicaragua:'NCA', Nigeria:'NGA', 'North Korea':'PRK', 'North Macedonia':'MKD',
+    Norway:'NOR', Pakistan:'PAK', Palestine:'PLE', Panama:'PAN', Paraguay:'PAR',
+    Peru:'PER', Philippines:'PHI', Poland:'POL', Portugal:'POR', Qatar:'QAT',
+    Romania:'ROU', Russia:'RUS', 'Saudi Arabia':'KSA', Scotland:'SCO', Senegal:'SEN',
+    Serbia:'SRB', Singapore:'SGP', Slovakia:'SVK', Slovenia:'SVN',
+    'South Africa':'RSA', 'South Korea':'KOR', Spain:'ESP', Sweden:'SWE',
+    Switzerland:'SUI', Syria:'SYR', Thailand:'THA', Tunisia:'TUN', Turkey:'TUR',
+    Uganda:'UGA', Ukraine:'UKR', UAE:'UAE', 'United Arab Emirates':'UAE',
+    'United Kingdom':'GBR', Uruguay:'URU', USA:'USA', 'United States':'USA',
+    Uzbekistan:'UZB', Venezuela:'VEN', Vietnam:'VIE', Wales:'WAL',
+    World:'WLD', International:'INT',
+  };
+
+  const flag = countryFlag(country);
+  // 입력이 2글자 ISO 코드인 경우 → 3자리로 변환 시도
+  let code3 = codeMap[country];
+  if (!code3 && country.length === 2) {
+    // ISO 2자리 → 국가명 역매핑 시도, 없으면 그냥 2자리 대문자 사용
+    code3 = country.toUpperCase();
+  }
+  if (!code3) {
+    code3 = country.substring(0, 3).toUpperCase();
+  }
+
+  return { flag, code: code3 };
+}
+
 
 export function FormBadges({ form }: { form: string }) {
   return (
@@ -233,17 +286,45 @@ export function StatsTab({ statistics }: { statistics: any[] }) {
     ['Shots off Goal', 'Off Target'], ['Blocked Shots', 'Blocked'], ['Corner Kicks', 'Corners'],
     ['Fouls', 'Fouls'], ['Yellow Cards', 'Yellows'], ['Red Cards', 'Reds'],
     ['Goalkeeper Saves', 'Saves'], ['Total passes', 'Total Passes'], ['Passes accurate', 'Accurate Passes'],
-    ['Passes %', 'Pass %'], ['Offsides', 'Offsides'],
+    ['Passes %', 'Pass %'], ['Offsides', 'Offsides'], ['Total attacks', 'Attacks'], ['Dangerous attacks', 'Dangerous']
   ].filter(([key]) => homeMap[key] != null || awayMap[key] != null);
+
+  // 모멘텀 바 구현용 데이터 추출
+  const hDA = parseInt(homeMap['Dangerous attacks']?.toString() || '0');
+  const aDA = parseInt(awayMap['Dangerous attacks']?.toString() || '0');
+  const hasMomentum = hDA > 0 || aDA > 0;
+  const hPct = hasMomentum ? Math.round((hDA / (hDA + aDA)) * 100) : 50;
+
   return (
-    <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
-      <div className="flex justify-between text-[10px] font-black mb-1">
-        <span className="text-emerald-400 truncate">{homeStats.team}</span>
-        <span className="text-orange-400 truncate text-right">{awayStats.team}</span>
+    <div className="space-y-4">
+      {hasMomentum && (
+        <div className="bg-gradient-to-r from-emerald-500/10 via-black to-orange-500/10 p-4 rounded-2xl border border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 left-[50%] w-[1px] h-full bg-white/20 z-0"></div>
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-3">Live Match Momentum (Attacks)</div>
+          <div className="flex justify-between items-end mb-2 relative z-10 text-white font-black text-lg">
+            <span className="text-emerald-400">{hDA}</span>
+            <span className="text-orange-400">{aDA}</span>
+          </div>
+          <div className="flex h-3 rounded-full overflow-hidden bg-white/5 relative z-10 shadow-inner">
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-1000 ease-in-out relative" style={{ width: `${hPct}%` }}>
+              {hPct > 60 && <div className="absolute right-0 top-0 bottom-0 w-10 bg-white/30 blur-md pointer-events-none animate-pulse"></div>}
+            </div>
+            <div className="bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-1000 ease-in-out relative" style={{ width: `${100 - hPct}%` }}>
+              {hPct < 40 && <div className="absolute left-0 top-0 bottom-0 w-10 bg-white/30 blur-md pointer-events-none animate-pulse"></div>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
+        <div className="flex justify-between text-[10px] font-black mb-1">
+          <span className="text-emerald-400 truncate">{homeStats.team}</span>
+          <span className="text-orange-400 truncate text-right">{awayStats.team}</span>
+        </div>
+        {rows.map(([key, label]) => (
+          <StatBar key={key} label={label} home={homeMap[key]} away={awayMap[key]} />
+        ))}
       </div>
-      {rows.map(([key, label]) => (
-        <StatBar key={key} label={label} home={homeMap[key]} away={awayMap[key]} />
-      ))}
     </div>
   );
 }
@@ -628,35 +709,7 @@ export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
 
   return (
     <div className="space-y-6">
-      {(odds && analysis.prediction) && (
-        <div className="bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-indigo-500/10 p-4 rounded-2xl border border-indigo-500/20 mb-6">
-          <div className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-            📊 Value Bet / Match Odds (Bet365)
-          </div>
-          <div className="grid grid-cols-3 gap-2 text-center">
-            {[
-              { label: 'Home', val: homeOdd ?? '–', prob: analysis.prediction.homeWin, color: 'text-indigo-400' },
-              { label: 'Draw', val: drawOdd ?? '–', prob: analysis.prediction.draw, color: 'text-slate-400' },
-              { label: 'Away', val: awayOdd ?? '–', prob: analysis.prediction.awayWin, color: 'text-purple-400' },
-            ].map((o, idx) => {
-              const pr = parseFloat((o.prob ?? '0').replace('%', '')) / 100;
-              const ev = o.val !== '–' ? parseFloat((pr * parseFloat(o.val)).toFixed(2)) : 0;
-              const isValue = ev > 1.05;
-              return (
-                <div key={idx} className={`bg-black/20 rounded-xl p-2 border ${isValue ? 'border-amber-500/50 shadow-[0_0_10px_rgba(245,158,11,0.2)]' : 'border-white/5'}`}>
-                  <div className={`text-lg font-black ${o.color}`}>{o.val}</div>
-                  <div className="text-[10px] text-slate-500 font-bold mb-1">{o.label} ({o.prob ?? '–'})</div>
-                  {isValue && (
-                    <div className="text-[8px] font-black text-amber-400 bg-amber-500/10 py-0.5 rounded uppercase flex items-center justify-center gap-1 mt-1 border border-amber-500/20">
-                      <span className="text-[10px]">🔥</span> Value {ev.toFixed(2)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {/* Value Bet 섹션 제거됨 */}
 
       {analysis.prediction && (
         <div className="grid grid-cols-3 gap-3 text-center">
@@ -731,7 +784,73 @@ export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
   );
 }
 
-// ── 탭: 포아송 예측 ───────────────────────────────────────────────────────────
+// ── 탭: Trollbox 채팅방 ───────────────────────────────────────────────────────
+export function ChatTab({ fixtureId }: { fixtureId: string }) {
+  const [messages, setMessages] = useState<{ id: string; user: string; text: string; time: string }[]>([]);
+  const [input, setInput] = useState('');
+  const [username, setUsername] = useState('Guest');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let name = localStorage.getItem('betman-chat-name');
+    if (!name) {
+      name = 'BetMan_' + Math.floor(Math.random() * 9999);
+      localStorage.setItem('betman-chat-name', name);
+    }
+    setUsername(name);
+    // 모의 채팅 로딩
+    setMessages([
+      { id: '1', user: 'System', text: 'Welcome to the Trollbox! Predictions?', time: '00:00' }
+    ]);
+  }, []);
+
+  const send = () => {
+    if (!input.trim()) return;
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const newMsg = { id: Date.now().toString(), user: username, text: input, time: now };
+    setMessages(prev => [...prev, newMsg]);
+    setInput('');
+    setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+  };
+
+  return (
+    <div className="flex flex-col h-[400px] bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+      <div className="bg-indigo-500/10 border-b border-white/5 p-3 flex items-center gap-2">
+        <MessageSquare className="w-4 h-4 text-indigo-400" />
+        <span className="text-[10px] font-black uppercase text-indigo-400 tracking-widest">Global Trollbox</span>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 no-scrollbar flex flex-col">
+        {messages.map(m => (
+          <div key={m.id} className="flex flex-col">
+            <div className="flex items-baseline gap-1.5 mb-0.5">
+              <span className={`text-[10px] font-black ${m.user === username ? 'text-emerald-400' : m.user === 'System' ? 'text-amber-400' : 'text-slate-400'}`}>{m.user}</span>
+              <span className="text-[8px] font-bold text-slate-600">{m.time}</span>
+            </div>
+            <div className={`px-3 py-2 rounded-xl text-sm font-bold w-fit max-w-[85%] ${m.user === username ? 'bg-indigo-500 text-white rounded-tl-none' : 'bg-white/5 text-slate-300 rounded-tr-none'}`}>
+              {m.text}
+            </div>
+          </div>
+        ))}
+        <div ref={chatEndRef} />
+      </div>
+      <div className="p-3 border-t border-white/5 bg-black/40 flex items-center gap-2">
+        <input
+          className="flex-1 bg-white/5 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500 placeholder:text-slate-600 font-bold"
+          placeholder="Trash talk or predictions..."
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && send()}
+        />
+        <button onClick={send} className="p-2 bg-indigo-500 rounded-xl text-white hover:bg-indigo-600 transition-colors">
+          <Send className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── 탭: 포아송 예측 (기존) ────────────────────────────────────────────────────
+
 function poissonProb(lambda: number, k: number): number {
   if (lambda <= 0) return 0;
   let val = Math.exp(-lambda);
@@ -874,25 +993,36 @@ export function InjuriesTab({ injuries, game }: { injuries: any[]; game: any }) 
     return 'bg-slate-500/20 text-slate-400 border-slate-500/30';
   };
 
+  const getReasonIcon = (reason: string = '', type: string = '') => {
+    const text = (reason + ' ' + type).toLowerCase();
+    if (text.includes('suspend') || text.includes('suspension') || text.includes('card') || text.includes('red') || text.includes('yellow') || text.includes('disciplinary')) return '🚫';
+    if (text.includes('injur') || text.includes('knock') || text.includes('surgery') || text.includes('illness') || text.includes('sick') || text.includes('virus') || text.includes('muscle') || text.includes('hamstring') || text.includes('ankle') || text.includes('knee')) return '🩹';
+    return '⚠️';
+  };
+
   return (
     <div className="space-y-4">
       {[...groups.entries()].map(([teamName, { players }]) => (
         <div key={teamName} className="bg-black/20 rounded-2xl p-4 border border-white/5">
           <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-3">{teamName}</div>
           <div className="space-y-2">
-            {players.map((inj, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2">
-                <span className="text-xs font-bold text-white flex-1 truncate">{inj.player ?? '–'}</span>
-                {inj.type && (
-                  <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${typeBadge(inj.type)}`}>
-                    {inj.type}
-                  </span>
-                )}
-                {inj.reason && (
-                  <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{inj.reason}</span>
-                )}
-              </div>
-            ))}
+            {players.map((inj, i) => {
+              const icon = getReasonIcon(inj.reason, inj.type);
+              return (
+                <div key={i} className="flex items-center gap-3 bg-white/5 rounded-xl px-3 py-2">
+                  <span className="text-sm shrink-0">{icon}</span>
+                  <span className="text-xs font-bold text-white flex-1 truncate">{inj.player ?? '–'}</span>
+                  {inj.type && (
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border ${typeBadge(inj.type)}`}>
+                      {inj.type}
+                    </span>
+                  )}
+                  {inj.reason && (
+                    <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{inj.reason}</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}

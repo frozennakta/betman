@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Star } from 'lucide-react';
-import { BIG_LEAGUES, STATUS_LABEL, countryFlag, useLocalDateTime } from '@/components/AnalysisTabs';
+import { Star, BarChart3 } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { BIG_LEAGUES, STATUS_LABEL, countryFlag, useLocalDateTime, getCountryDisplay } from '@/components/AnalysisTabs';
+import { useTheme } from '@/context/ThemeContext';
 
 // ── 즐겨찾기 훅 ──────────────────────────────────────────────────────────────
 function useFavorites() {
@@ -48,12 +50,13 @@ function useLiveMinute(game: any): string {
 export { useFavorites };
 
 export default function MatchCard({ game, isFavorite, onToggleFav, compact = false }: MatchCardProps) {
+  const { isTomatoMode } = useTheme();
   const isLive     = game.liveStatus !== 'PENDING' && game.liveStatus !== 'FT';
   const isFinished = game.liveStatus === 'FT';
   const isBig      = BIG_LEAGUES.has(game.league);
   const liveMinute = useLiveMinute(game);
   const localDT    = useLocalDateTime(game.date);
-  const flag       = countryFlag(game.country);
+  const { flag, code } = getCountryDisplay(game.country || '');
   const fixtureId  = game.id?.replace('fixture_', '');
 
   // 골 스코어 변경 감지 → 플래시
@@ -66,6 +69,19 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
     }
     if (prevScore.current.home !== game.homeScore || prevScore.current.away !== game.awayScore) {
       setScoreFlash(true);
+      // 토마토 + 에메랄드 컨페티 (골 축포) - Tomato 모드에서만 실행
+      if (isTomatoMode) {
+        try {
+          confetti({
+            particleCount: 80,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#ef4444', '#f87171', '#10b981', '#34d399', '#ffffff'],
+            zIndex: 9999
+          });
+        } catch {}
+      }
+
       prevScore.current = { home: game.homeScore, away: game.awayScore };
       const t = setTimeout(() => setScoreFlash(false), 3000);
       return () => clearTimeout(t);
@@ -98,122 +114,123 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
     window.open(`/match/${fixtureId}?${p.toString()}`, '_blank');
   };
 
+  const cardBaseCls = isTomatoMode 
+    ? 'cursor-pointer bg-[var(--bg-card)] border border-white/5 rounded-2xl transition-all duration-300 transform active:scale-[0.98] hover:shadow-2xl'
+    : 'cursor-pointer bg-white border border-zinc-200 rounded-2xl transition-all hover:shadow-lg active:scale-[0.98]';
+    
+  const flashCls = isTomatoMode
+    ? 'border-red-500/80 bg-red-500/10 shadow-[0_0_20px_rgba(239,68,68,0.3)]'
+    : 'border-red-200 bg-red-50 shadow-lg shadow-red-500/5';
+    
+  const defaultBg = isTomatoMode && isBig
+    ? 'border-amber-500/20 shadow-xl shadow-amber-500/5'
+    : isTomatoMode ? 'border-white/5' : 'border-zinc-200';
+
   return (
     <div
       onClick={openMatchPage}
-      className={`relative overflow-hidden cursor-pointer bg-[var(--bg-card)] border rounded-2xl transition-all ${
-        scoreFlash
-          ? 'border-red-500/50 bg-red-500/5 shadow-lg shadow-red-500/10'
-          : isBig
-            ? 'border-amber-500/20 hover:border-amber-500/40'
-            : 'border-white/5 hover:border-indigo-500/30 hover:bg-white/[0.03]'
+      className={`relative overflow-hidden transition-all duration-300 ${cardBaseCls} ${
+        scoreFlash ? flashCls : defaultBg
       }`}
     >
       {/* 빅리그 왼쪽 악센트 */}
       {isBig && <div className="absolute left-0 inset-y-0 w-0.5 bg-amber-400/50 rounded-l-2xl" />}
 
-      <div className={`flex flex-col gap-1.5 ${compact ? 'px-2.5 pt-1.5 pb-1' : 'px-3.5 sm:px-4 pt-2.5 pb-2'}`}>
-        {/* 상단: 시간 + 리그 배지 (컴팩트 모드에서 리그 배지 숨김) */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <div className="flex items-center gap-1 bg-white/5 rounded border border-white/10 px-1.5 py-0.5 shrink-0">
-            {isLive ? (
-              <span className="text-[10px] font-black text-red-400 tabular-nums leading-none">
-                {liveMinute || `${game.elapsed ?? '–'}'`}
-              </span>
-            ) : isFinished ? (
-              <span className="text-[10px] font-black text-slate-500 leading-none">FT</span>
-            ) : (
-              <span className="text-[10px] font-black text-indigo-300 tabular-nums leading-none">
-                {localDT.date ? `${localDT.date} ` : ''}{localDT.time || game.matchTime}
-              </span>
-            )}
-          </div>
-          {!compact && (
-            <span className="text-[9px] font-black text-slate-500 uppercase px-1.5 py-0.5 bg-white/5 rounded border border-white/5 truncate max-w-[200px]">
-              {flag ? `${flag} ` : ''}{isBig ? '★ ' : ''}{game.country} · {game.league}
-            </span>
+      {/* 상단 행: 시간 + 국가코드 + 리그명 (잘림 없이 1줄) + 액션 버튼 */}
+      <div className={`flex items-center gap-2 ${compact ? 'px-2 pt-1 pb-0.5' : 'px-3 sm:px-4 pt-2 pb-0.5'}`}>
+        <span className={`text-[12px] sm:text-[13px] font-black tabular-nums shrink-0 ${isTomatoMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
+          {isLive ? (liveMinute || `${game.elapsed ?? '–'}'`) : isFinished ? 'FT' : (localDT.time || game.matchTime)}
+        </span>
+        <span className={`text-[9px] font-black shrink-0 px-1 py-0.5 rounded ${isTomatoMode ? 'text-slate-500 bg-white/5' : 'text-slate-500 bg-zinc-100'}`}>
+          {code}
+        </span>
+        <span className={`text-[10px] sm:text-[11px] font-medium flex-1 leading-none ${isTomatoMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          {game.league}
+        </span>
+        {/* 버튼들 */}
+        <div className="flex items-center gap-0 shrink-0">
+          {onToggleFav && (
+            <button
+              onClick={e => { e.stopPropagation(); onToggleFav(game.id); }}
+              className={`p-1.5 rounded-lg transition-colors ${isTomatoMode ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}
+            >
+              <Star className={`w-3 h-3 ${isFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-300'}`} />
+            </button>
           )}
-          {isLive && (
-            <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/10 text-red-400 text-[9px] font-black rounded border border-red-500/20 shrink-0">
-              <span className="w-1 h-1 rounded-full bg-red-500 animate-ping" />
-              {STATUS_LABEL[game.liveStatus] ?? game.liveStatus}
-            </span>
-          )}
-          {scoreFlash && (
-            <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[9px] font-black rounded border border-red-500/30 shrink-0 animate-pulse">
-              GOAL!
-            </span>
-          )}
+          <button
+            onClick={e => { e.stopPropagation(); openMatchPage(); }}
+            className={`p-1.5 rounded-lg transition-colors ${isTomatoMode ? 'hover:bg-white/5' : 'hover:bg-black/5'}`}
+            title="Match Analysis"
+          >
+            <BarChart3 className={`w-3 h-3 ${isTomatoMode ? 'text-indigo-400' : 'text-indigo-400'}`} />
+          </button>
         </div>
+      </div>
 
-        {/* 메인: 홈팀 — 스코어 — 원정팀 */}
+      {/* 하단 행: 홈팀 — 스코어 — 원정팀 */}
+      <div className={`flex items-center gap-2 sm:gap-4 ${compact ? 'px-2 pb-1' : 'px-3 sm:px-4 pb-2'}`}>
         {(() => {
-          const hasScore = (isLive || isFinished) && game.homeScore !== null;
-          const hWin = hasScore && game.homeScore > game.awayScore;
-          const aWin = hasScore && game.awayScore > game.homeScore;
-          const nameClass = compact ? 'text-xs' : 'text-sm';
+          const hasScore = (isLive || isFinished) && game.homeScore != null;
+          const hScore = game.homeScore ?? 0;
+          const aScore = game.awayScore ?? 0;
+          const hWin = hasScore && hScore > aScore;
+          const aWin = hasScore && aScore > hScore;
+          
+          const homeScoreColor = hWin ? 'text-red-500' : aWin ? (isTomatoMode ? 'text-slate-500' : 'text-slate-400') : (isTomatoMode ? 'text-white' : 'text-slate-800');
+          const awayScoreColor = aWin ? 'text-red-500' : hWin ? (isTomatoMode ? 'text-slate-500' : 'text-slate-400') : (isTomatoMode ? 'text-white' : 'text-slate-800');
+
           return (
-            <div className="flex items-center gap-2">
-              <span className={`flex-1 ${nameClass} font-black text-right truncate ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'}`}>
+            <>
+              <span className={`flex-1 text-[13px] sm:text-[14px] font-black text-right truncate ${
+                isTomatoMode ? 'text-white' : 'text-slate-900'
+              }`}>
                 {game.homeTeam}
               </span>
-              <div className={`shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-lg border transition-all ${
-                hasScore
-                  ? scoreFlash ? 'bg-red-500/20 border-red-500/40' : 'bg-black/40 border-white/10'
-                  : 'bg-white/5 border-white/5'
+              
+              <div className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border tabular-nums transition-all ${
+                isTomatoMode 
+                  ? (scoreFlash ? 'bg-red-500/20 border-red-500/40' : 'bg-black/30 border-white/5') 
+                  : (scoreFlash ? 'bg-red-50 border-red-200' : 'bg-zinc-100 border-zinc-200')
               }`}>
-                {hasScore ? (
-                  <>
-                    <span className={`text-base font-black tabular-nums w-4 text-center ${hWin ? 'text-red-400' : aWin ? 'text-slate-400' : 'text-white'}`}>{game.homeScore}</span>
-                    <span className="text-slate-500 font-black text-xs">:</span>
-                    <span className={`text-base font-black tabular-nums w-4 text-center ${aWin ? 'text-red-400' : hWin ? 'text-slate-400' : 'text-white'}`}>{game.awayScore}</span>
-                  </>
-                ) : (
-                  <span className="text-[10px] font-black text-slate-600 px-0.5">VS</span>
-                )}
+                <span className={`text-[13px] sm:text-[14px] font-black min-w-[10px] text-center ${homeScoreColor}`}>
+                  {hScore}
+                </span>
+                <span className={`font-bold text-[10px] ${isTomatoMode ? 'text-slate-600' : 'text-slate-300'}`}>:</span>
+                <span className={`text-[13px] sm:text-[14px] font-black min-w-[10px] text-center ${awayScoreColor}`}>
+                  {aScore}
+                </span>
               </div>
-              <span className={`flex-1 ${nameClass} font-black truncate ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'}`}>
+
+              <span className={`flex-1 text-[13px] sm:text-[14px] font-black text-left truncate ${
+                isTomatoMode ? 'text-white' : 'text-slate-900'
+              }`}>
                 {game.awayTeam}
               </span>
-
-              {/* 즐겨찾기 버튼 */}
-              <div className="flex items-center gap-1 shrink-0">
-                {onToggleFav && (
-                  <button
-                    onClick={e => { e.stopPropagation(); onToggleFav(game.id); }}
-                    className="p-1 rounded-lg hover:bg-white/10 transition-colors"
-                    title={isFavorite ? 'Remove favorite' : 'Add to favorites'}
-                  >
-                    <Star className={`w-3.5 h-3.5 transition-colors ${isFavorite ? 'text-amber-400 fill-amber-400' : 'text-slate-600'}`} />
-                  </button>
-                )}
-                <span className="text-[9px] font-black text-slate-700">→</span>
-              </div>
-            </div>
+            </>
           );
         })()}
-
-        {/* 배당률 행 (컴팩트 모드 숨김, 데이터 있을 때만) */}
-        {!compact && game.homeOdds != null && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-indigo-400">
-              H {game.homeOdds}
-            </span>
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-slate-400">
-              D {game.drawOdds}
-            </span>
-            <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-white/5 border border-white/5 text-orange-400">
-              A {game.awayOdds}
-            </span>
-          </div>
-        )}
       </div>
+
+      {/* 모바일 하단 배당 정보 (컴팩트 모드가 아닐 때만) */}
+      {!compact && game.homeOdds != null && (
+        <div className="flex items-center gap-3 px-4 pb-2 ml-[80px] sm:ml-[115px] opacity-60">
+          {[
+            { l: 'H', v: game.homeOdds, c: 'text-indigo-400' },
+            { l: 'D', v: game.drawOdds, c: 'text-slate-400' },
+            { l: 'A', v: game.awayOdds, c: 'text-orange-400' }
+          ].map(o => (
+            <span key={o.l} className="text-[9px] font-black tracking-tighter">
+              <span className={o.c}>{o.l}</span> {o.v}
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* 라이브 진행 바 */}
       {liveProgressPct !== null && (
-        <div className="h-0.5 bg-white/5">
+        <div className={`h-[3px] absolute bottom-0 left-0 right-0 ${isTomatoMode ? 'bg-white/5' : 'bg-black-[3%]'}`}>
           <div
-            className="h-full bg-gradient-to-r from-red-600 to-red-400 transition-all duration-1000"
+            className={`h-full transition-all duration-1000 ${isTomatoMode ? 'bg-red-500' : 'bg-red-500/70'}`}
             style={{ width: `${liveProgressPct}%` }}
           />
         </div>

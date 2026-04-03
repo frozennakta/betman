@@ -5,10 +5,11 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2, ArrowLeft, Star } from 'lucide-react';
 import {
   countryFlag, STATUS_LABEL,
-  AnalysisTab, InfoTab, EventsTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab,
+  AnalysisTab, InfoTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab
 } from '@/components/AnalysisTabs';
+import html2canvas from 'html2canvas';
 
-const TABS = ['Analysis', 'Predict', 'Lineup', 'Injuries', 'Stats', 'Events', 'Info', 'Notes'] as const;
+const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Info', 'Notes', 'Chat'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -20,6 +21,7 @@ export default function MatchPage() {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<TabKey>('Analysis');
   const [isFav, setIsFav] = useState(false);
+  const captureRef = useRef<HTMLDivElement>(null);
 
   // 쿼리파람에서 기본 게임 정보 복원 (정적 필드)
   const game = {
@@ -132,21 +134,40 @@ export default function MatchPage() {
         <div className="absolute bottom-[-10%] right-[-5%] w-[40%] h-[40%] bg-purple-600/10 blur-[200px] rounded-full" />
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-6">
+      <div className="max-w-3xl mx-auto px-4 py-6" ref={captureRef}>
 
         {/* 상단 광고 슬롯 */}
         <div className="w-full h-[90px] bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-center mb-6">
           <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Advertisement</span>
         </div>
 
-        {/* 뒤로가기 */}
-        <button
-          onClick={() => window.close()}
-          className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors mb-5 group"
-        >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          <span className="text-xs font-black">Back</span>
-        </button>
+        {/* 뒤로가기 & 다운로드 캡쳐 */}
+        <div className="flex items-center justify-between mb-5">
+          <button
+            onClick={() => window.close()}
+            className="flex items-center gap-2 text-slate-500 hover:text-white transition-colors group"
+          >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+            <span className="text-xs font-black">Back</span>
+          </button>
+          <button
+            onClick={() => {
+              if (captureRef.current) {
+                // 다운로드 아이콘 대신 버튼 전체 적용
+                html2canvas(captureRef.current, { backgroundColor: '#0e0e16', scale: 2 }).then(canvas => {
+                  const link = document.createElement('a');
+                  link.download = `TomatoScore_${game.homeTeam}_vs_${game.awayTeam}.png`;
+                  link.href = canvas.toDataURL();
+                  link.click();
+                });
+              }
+            }}
+            className="flex items-center gap-1.5 bg-indigo-500/10 border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/20 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            <span className="text-[10px] font-black uppercase tracking-widest">Share Ticket</span>
+            <span className="text-sm">📸</span>
+          </button>
+        </div>
 
         {/* 경기 헤더 카드 */}
         <div className="bg-[var(--bg-card)] border border-white/10 rounded-3xl p-5 mb-6 shadow-xl">
@@ -236,6 +257,39 @@ export default function MatchPage() {
               </span>
             )}
           </div>
+
+          {/* 인라인 이벤트 (골·카드·교체) */}
+          {analysis?.events?.filter((e: any) => ['Goal', 'Card', 'subst'].includes(e.type)).length > 0 && (
+            <div className="mt-4 pt-3 border-t border-white/5 space-y-1.5">
+              {analysis.events
+                .filter((e: any) => ['Goal', 'Card', 'subst'].includes(e.type))
+                .map((e: any, i: number) => {
+                  const isHome = e.team === game.homeTeam;
+                  const icon =
+                    e.type === 'Goal'
+                      ? (e.detail?.includes('Penalty') ? '⚽🎯' : e.detail?.includes('Own') ? '⚽🔴' : '⚽')
+                      : e.type === 'Card'
+                      ? (e.detail?.includes('Red') ? '🟥' : '🟨')
+                      : '🔄';
+                  return (
+                    <div key={i} className={`flex items-center gap-2 ${!isHome ? 'flex-row-reverse' : ''}`}>
+                      <span className="text-[10px] font-black text-slate-500 tabular-nums w-9 shrink-0 text-center">
+                        {e.minute}{e.extra ? `+${e.extra}` : ''}'
+                      </span>
+                      <span className="text-sm shrink-0">{icon}</span>
+                      <div className={`flex-1 min-w-0 ${!isHome ? 'text-right' : 'text-left'}`}>
+                        <span className="text-[11px] font-bold text-white truncate block leading-none">{e.player}</span>
+                        {e.assist && (
+                          <span className="text-[9px] text-slate-500 truncate block">
+                            {e.type === 'subst' ? '↑' : '→'} {e.assist}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
 
         {/* 탭 바 */}
@@ -270,11 +324,11 @@ export default function MatchPage() {
               {tab === 'Analysis'   && <AnalysisTab  analysis={analysis} game={fullGame} />}
               {tab === 'Predict'   && <PoissonTab   analysis={analysis} game={fullGame} />}
               {tab === 'Lineup' && <LineupTab    lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} />}
-              {tab === 'Injuries'   && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
+              {tab === 'Absences' && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
               {tab === 'Stats'   && <StatsTab     statistics={analysis.statistics ?? []} />}
-              {tab === 'Events' && <EventsTab    events={analysis.events ?? []} />}
               {tab === 'Info'   && <InfoTab      analysis={analysis} game={fullGame} />}
               {tab === 'Notes'   && <MemoTab      fixtureId={fixtureId} />}
+              {tab === 'Chat'   && <ChatTab      fixtureId={fixtureId} />}
             </>
           ) : (
             <div className="py-16 text-center">

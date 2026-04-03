@@ -33,7 +33,7 @@ export default function TotoPage() {
   const filteredGames = games.filter(g => g.type?.includes(subTab));
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 bg-[#030712]">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-12 bg-[var(--bg-base)]">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
         <div>
@@ -47,7 +47,7 @@ export default function TotoPage() {
         </div>
 
         {/* 탭에서 '전체' 삭제 - 사용자 요청 반영 */}
-        <div className="flex bg-slate-900/50 p-1 rounded-2xl border border-white/5 shadow-2xl">
+        <div className="flex bg-slate-900/50 p-1.5 rounded-2xl border border-white/10 shadow-2xl backdrop-blur-xl">
           {[
             { key: 'WDL', label: 'WDL (14G)' },
             { key: 'SPECIAL', label: 'Special' },

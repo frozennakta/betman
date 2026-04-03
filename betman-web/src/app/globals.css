@@ -3,12 +3,12 @@
 /* ═══ TomatoScore Design System ═══ */
 
 :root {
-  /* Deep dark base with warm undertone */
-  --background: #0a0a0f;
+  /* Deep dark base with warm undertone - 더 깊은 블랙으로 대비 강화 */
+  --background: #050508;
   --foreground: #f0f0f5;
-  --bg-base: #0a0a0f;
-  --bg-card: #13131a;
-  --bg-card-hover: #1a1a24;
+  --bg-base: #050508;
+  --bg-card: #111118;
+  --bg-card-hover: #161622;
   --text-primary: #e8e8ef;
   --text-secondary: #8b8b9e;
   --text-muted: #55556a;
@@ -28,12 +28,13 @@
 }
 
 html.light {
-  --bg-base: #f5f0eb;
+  /* 시원하고 깔끔한 배경색으로 흰색 카드와 대비 확보 */
+  --bg-base: #eff1f5;
   --bg-card: #ffffff;
-  --bg-card-hover: #faf7f4;
+  --bg-card-hover: #f8fafc;
   --text-primary: #1a1a1f;
-  --text-secondary: #6b6b7b;
-  --text-muted: #9b9bab;
+  --text-secondary: #64748b;
+  --text-muted: #94a3b8;
 }
 
 /* ═══ Google Font ═══ */
@@ -193,15 +194,29 @@ html.light .bg-indigo-600 .text-white\/60 { color: rgba(255,255,255,0.6) !import
 html.light .bg-indigo-600 .text-white\/50 { color: rgba(255,255,255,0.5) !important; }
 html.light .bg-indigo-600 .text-slate-400 { color: rgba(255,255,255,0.7) !important; }
 
-/* Border & BG opacity overrides */
-html.light .border-white\/5  { border-color: rgba(0,0,0,0.08) !important; }
-html.light .border-white\/10 { border-color: rgba(0,0,0,0.12) !important; }
-html.light .bg-white\/5      { background-color: rgba(0,0,0,0.03) !important; }
-html.light .bg-white\/10     { background-color: rgba(0,0,0,0.06) !important; }
 html.light .bg-black\/20     { background-color: rgba(0,0,0,0.04) !important; }
 html.light .bg-black\/30     { background-color: rgba(0,0,0,0.06) !important; }
 html.light .bg-black\/40     { background-color: rgba(0,0,0,0.07) !important; }
 html.light .bg-black\/70     { background-color: rgba(0,0,0,0.4) !important; }
+html.light .bg-slate-900\/50  { background-color: rgba(0,0,0,0.05) !important; }
+html.light .bg-slate-900\/80  { background-color: rgba(0,0,0,0.08) !important; }
+html.light .bg-slate-950\/50  { background-color: rgba(0,0,0,0.02) !important; }
+
+/* Border & BG opacity overrides - Broad Match */
+html.light .border-white\/5, 
+html.light .border-white\/\[0\.05\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/10,
+html.light .border-white\/\[0\.1\] { border-color: rgba(0,0,0,0.08) !important; }
+
+html.light .bg-white\/5,
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/6,
+html.light .bg-white\/\[0\.07\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/\[0\.06\],
+html.light .bg-white\/10,
+html.light .bg-white\/\[0\.1\] { background-color: rgba(0,0,0,0.04) !important; }
 
 /* Semi-transparent colored BGs */
 html.light .bg-red-500\/10    { background-color: rgba(239,68,68,0.08) !important; }
