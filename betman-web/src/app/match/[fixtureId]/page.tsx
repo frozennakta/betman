@@ -2,14 +2,14 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
-import { Loader2, ArrowLeft, Star } from 'lucide-react';
+import { Loader2, ArrowLeft, Star, MapPin, User } from 'lucide-react';
 import {
   countryFlag, STATUS_LABEL,
-  AnalysisTab, InfoTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab
+  AnalysisTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab
 } from '@/components/AnalysisTabs';
 import html2canvas from 'html2canvas';
 
-const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Info', 'Notes', 'Chat'] as const;
+const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Notes', 'Chat'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -109,6 +109,17 @@ export default function MatchPage() {
   useEffect(() => {
     try { setHasNote(!!localStorage.getItem(noteKey)); } catch {}
   }, [noteKey]);
+
+  // 날씨
+  const [weather, setWeather] = useState<{ emoji: string; label: string; temp: number; wind: number } | null>(null);
+  useEffect(() => {
+    const city = game.venue?.city || searchParams.get('city');
+    if (!city) return;
+    fetch(`/api/weather?city=${encodeURIComponent(city)}`)
+      .then(r => r.json())
+      .then(d => { if (d.emoji) setWeather(d); })
+      .catch(() => {});
+  }, []);
 
   // 분석 데이터 fetch
   useEffect(() => {
@@ -290,6 +301,40 @@ export default function MatchPage() {
                 })}
             </div>
           )}
+
+          {/* 매치 메타 정보 + 날씨 */}
+          {(analysis?.round || analysis?.season || game.venue?.name || game.referee || weather) && (
+            <div className="mt-4 pt-3 border-t border-white/5 flex flex-wrap gap-x-4 gap-y-2">
+              {analysis?.round && (
+                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                  <span className="text-slate-600">🏆</span> {analysis.round}
+                </span>
+              )}
+              {analysis?.season && (
+                <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1">
+                  <span className="text-slate-600">📅</span> {analysis.season}
+                </span>
+              )}
+              {game.venue?.name && (
+                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 min-w-0">
+                  <MapPin className="w-3 h-3 text-slate-600 shrink-0" />
+                  <span className="truncate">{game.venue.name}{game.venue.city ? ` · ${game.venue.city}` : ''}</span>
+                </span>
+              )}
+              {game.referee && (
+                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1 min-w-0">
+                  <User className="w-3 h-3 text-slate-600 shrink-0" />
+                  <span className="truncate">{game.referee}</span>
+                </span>
+              )}
+              {weather && (
+                <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                  <span>{weather.emoji}</span>
+                  <span>{weather.temp}°C · {weather.wind} km/h</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 탭 바 */}
@@ -326,7 +371,6 @@ export default function MatchPage() {
               {tab === 'Lineup' && <LineupTab    lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} />}
               {tab === 'Absences' && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
               {tab === 'Stats'   && <StatsTab     statistics={analysis.statistics ?? []} />}
-              {tab === 'Info'   && <InfoTab      analysis={analysis} game={fullGame} />}
               {tab === 'Notes'   && <MemoTab      fixtureId={fixtureId} />}
               {tab === 'Chat'   && <ChatTab      fixtureId={fixtureId} />}
             </>
