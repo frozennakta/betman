@@ -111,7 +111,7 @@ export default function MatchPage() {
   }, [noteKey]);
 
   // 날씨
-  const [weather, setWeather] = useState<{ emoji: string; label: string; temp: number; wind: number } | null>(null);
+  const [weather, setWeather] = useState<{ emoji: string; label: string; temp: number; wind: number; humidity: number; pressure: number } | null>(null);
   useEffect(() => {
     const city = game.venue?.city || searchParams.get('city');
     if (!city) return;
@@ -269,6 +269,46 @@ export default function MatchPage() {
             )}
           </div>
 
+          {/* 라이브 미니스탯: 코너·옐로·레드 */}
+          {(isLive || isFinished) && analysis?.statistics?.length >= 2 && (() => {
+            const hMap = Object.fromEntries((analysis.statistics[0]?.stats ?? []).map((s: any) => [s.type, s.value ?? 0]));
+            const aMap = Object.fromEntries((analysis.statistics[1]?.stats ?? []).map((s: any) => [s.type, s.value ?? 0]));
+            const rows = [
+              { icon: '🚩', label: 'Corners',  hKey: 'Corner Kicks', aKey: 'Corner Kicks' },
+              { icon: '🟨', label: 'Yellows',  hKey: 'Yellow Cards', aKey: 'Yellow Cards' },
+              { icon: '🟥', label: 'Reds',     hKey: 'Red Cards',    aKey: 'Red Cards'    },
+              { icon: '🎯', label: 'On Target', hKey: 'Shots on Goal', aKey: 'Shots on Goal' },
+            ].filter(r => (hMap[r.hKey] ?? 0) > 0 || (aMap[r.aKey] ?? 0) > 0);
+            if (!rows.length) return null;
+            return (
+              <div className="mt-3 grid gap-1.5">
+                {rows.map(r => {
+                  const h = hMap[r.hKey] ?? 0;
+                  const a = aMap[r.aKey] ?? 0;
+                  const total = h + a || 1;
+                  const hPct = Math.round((h / total) * 100);
+                  return (
+                    <div key={r.label} className="flex items-center gap-2">
+                      <span className="text-[11px] font-black tabular-nums text-white w-4 text-right">{h}</span>
+                      <div className="flex-1 flex items-center gap-1.5">
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-white/5">
+                          <div className="h-full bg-indigo-500/70 rounded-full" style={{ width: `${hPct}%` }} />
+                        </div>
+                        <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest w-14 text-center shrink-0">
+                          {r.icon} {r.label}
+                        </span>
+                        <div className="flex-1 h-1.5 rounded-full overflow-hidden bg-white/5">
+                          <div className="h-full bg-orange-500/70 rounded-full ml-auto" style={{ width: `${100 - hPct}%`, marginLeft: 'auto' }} />
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-black tabular-nums text-white w-4 text-left">{a}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* 인라인 이벤트 (골·카드·교체) */}
           {analysis?.events?.filter((e: any) => ['Goal', 'Card', 'subst'].includes(e.type)).length > 0 && (
             <div className="mt-4 pt-3 border-t border-white/5 space-y-1.5">
@@ -351,16 +391,28 @@ export default function MatchPage() {
                   {/* 오른쪽: 날씨 */}
                   {weather && (
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-2xl">{weather.emoji}</span>
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-300">
-                          <Thermometer className="w-3.5 h-3.5 text-orange-400" />
+                      <span className="text-3xl leading-none">{weather.emoji}</span>
+                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                        <div className="flex items-center gap-1 text-[12px] font-bold text-slate-300">
+                          <Thermometer className="w-3 h-3 text-orange-400 shrink-0" />
                           {weather.temp}°C
                         </div>
-                        <div className="flex items-center gap-1.5 text-[12px] font-bold text-slate-400">
-                          <Wind className="w-3.5 h-3.5 text-sky-400" />
+                        <div className="flex items-center gap-1 text-[12px] font-bold text-slate-400">
+                          <Wind className="w-3 h-3 text-sky-400 shrink-0" />
                           {weather.wind} km/h
                         </div>
+                        {weather.humidity != null && (
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                            <span className="text-blue-400 text-xs">💧</span>
+                            {weather.humidity}%
+                          </div>
+                        )}
+                        {weather.pressure != null && (
+                          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                            <span className="text-slate-400 text-xs">🔽</span>
+                            {weather.pressure} hPa
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

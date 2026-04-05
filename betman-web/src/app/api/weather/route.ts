@@ -32,7 +32,7 @@ export async function GET(request: Request) {
 
     // 2. Current weather (Open-Meteo, free, no key)
     const wxRes = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weather_code,wind_speed_10m&wind_speed_unit=kmh&timezone=auto`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${loc.latitude}&longitude=${loc.longitude}&current=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,surface_pressure&wind_speed_unit=kmh&timezone=auto`,
       { next: { revalidate: 1800 } } // 30min cache
     );
     const wxData = await wxRes.json();
@@ -42,8 +42,10 @@ export async function GET(request: Request) {
     return NextResponse.json({
       emoji,
       label,
-      temp: Math.round(cur.temperature_2m),
-      wind: Math.round(cur.wind_speed_10m),
+      temp:     Math.round(cur.temperature_2m),
+      wind:     Math.round(cur.wind_speed_10m),
+      humidity: Math.round(cur.relative_humidity_2m),
+      pressure: Math.round(cur.surface_pressure),
       city: loc.name,
       country: loc.country_code,
     });
