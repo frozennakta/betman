@@ -499,7 +499,7 @@ function PitchView({ lineup }: { lineup: any }) {
   );
 }
 
-export function LineupTab({ lineups, playerRatings = {}, onPlayerClick }: { lineups: any[], playerRatings?: Record<number, string>, onPlayerClick?: (p: any) => void }) {
+export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, onPlayerClick }: { lineups: any[], playerRatings?: Record<number, string>, playerStatsMap?: Record<number, any>, onPlayerClick?: (p: any) => void }) {
   if (!lineups || lineups.length === 0) {
     return <div className="py-12 text-center text-slate-600 text-sm font-bold">Lineup not announced</div>;
   }
@@ -548,7 +548,7 @@ export function LineupTab({ lineups, playerRatings = {}, onPlayerClick }: { line
                 <div
                   key={p.number}
                   className={`flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all' : ''}`}
-                  onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id] })}
+                  onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
                 >
                   <span className="text-[10px] font-black text-slate-500 w-5 text-right tabular-nums shrink-0">{p.number}</span>
                   <span className={`text-[9px] font-black px-1 rounded shrink-0 ${
@@ -575,7 +575,7 @@ export function LineupTab({ lineups, playerRatings = {}, onPlayerClick }: { line
                   <div
                     key={p.number}
                     className={`flex items-center gap-2 px-2 py-1 rounded-lg ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
-                    onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id] })}
+                    onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
                   >
                     <span className="text-[10px] font-black text-slate-600 w-5 text-right tabular-nums shrink-0">{p.number}</span>
                     <span className="text-xs text-slate-500 truncate">{p.name}</span>
@@ -1398,6 +1398,314 @@ export function PlayerStatCard({ player, onClose }: { player: any; onClose: () =
         >
           Close
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── 탭: 최근 폼 차트 ──────────────────────────────────────────────────────────
+export function FormTab({ homeLast20, awayLast20, homeTeam, awayTeam }: {
+  homeLast20: any[];
+  awayLast20: any[];
+  homeTeam: string;
+  awayTeam: string;
+}) {
+  if (!homeLast20?.length && !awayLast20?.length) {
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">No form data available</div>;
+  }
+
+  function TeamFormCard({ recent, teamName }: { recent: any[]; teamName: string }) {
+    const last10 = recent.slice(0, 10);
+    const played = recent.filter(m => m.result != null);
+    const wins   = played.filter(m => m.result === 'W').length;
+    const draws  = played.filter(m => m.result === 'D').length;
+    const losses = played.filter(m => m.result === 'L').length;
+    const gf = played.reduce((s, m) => s + (m.myGoals ?? 0), 0);
+    const ga = played.reduce((s, m) => s + (m.oppGoals ?? 0), 0);
+    const cleanSheets = played.filter(m => (m.oppGoals ?? 0) === 0).length;
+    const btts = played.filter(m => (m.myGoals ?? 0) > 0 && (m.oppGoals ?? 0) > 0).length;
+    const homeMatches = played.filter(m => m.isHome);
+    const awayMatches = played.filter(m => !m.isHome);
+    const homeWR = homeMatches.length > 0 ? Math.round((homeMatches.filter(m => m.result === 'W').length / homeMatches.length) * 100) : 0;
+    const awayWR = awayMatches.length > 0 ? Math.round((awayMatches.filter(m => m.result === 'W').length / awayMatches.length) * 100) : 0;
+
+    return (
+      <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-4">
+        <div className="text-[11px] font-black text-white truncate">{teamName}</div>
+
+        {/* Last 10 form dots */}
+        <div>
+          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Last {last10.length} Results</div>
+          <div className="flex gap-1 flex-wrap">
+            {last10.map((m, i) => (
+              <div
+                key={i}
+                title={`${m.homeTeam} ${m.homeGoals ?? '?'}-${m.awayGoals ?? '?'} ${m.awayTeam}\n${m.date}`}
+                className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-black cursor-default ${
+                  m.result === 'W' ? 'bg-emerald-500 text-white' :
+                  m.result === 'D' ? 'bg-slate-500 text-white' :
+                  'bg-red-500 text-white'
+                }`}
+              >
+                {m.result}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* W/D/L + Pts */}
+        <div className="grid grid-cols-4 gap-2 text-center">
+          {[
+            { label: 'W', val: wins,  color: 'text-emerald-400' },
+            { label: 'D', val: draws, color: 'text-slate-400' },
+            { label: 'L', val: losses, color: 'text-red-400' },
+            { label: 'Pts', val: wins * 3 + draws, color: 'text-indigo-400' },
+          ].map(({ label, val, color }) => (
+            <div key={label} className="bg-white/5 rounded-xl py-2">
+              <div className={`text-sm font-black ${color}`}>{val}</div>
+              <div className="text-[9px] font-black text-slate-600 mt-0.5">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Goal metrics */}
+        <div className="grid grid-cols-2 gap-2 text-center">
+          {[
+            { label: 'Goals For',     val: gf, sub: played.length > 0 ? `${(gf / played.length).toFixed(1)} avg` : '–' },
+            { label: 'Goals Against', val: ga, sub: played.length > 0 ? `${(ga / played.length).toFixed(1)} avg` : '–' },
+            { label: 'Clean Sheets',  val: cleanSheets, sub: played.length > 0 ? `${Math.round((cleanSheets / played.length) * 100)}%` : '–' },
+            { label: 'Both Score',    val: btts, sub: played.length > 0 ? `${Math.round((btts / played.length) * 100)}%` : '–' },
+          ].map(({ label, val, sub }) => (
+            <div key={label} className="bg-white/5 rounded-xl p-2.5">
+              <div className="text-sm font-black text-white">{val}</div>
+              <div className="text-[8px] font-black text-slate-600 mt-0.5">{label}</div>
+              <div className="text-[9px] text-slate-500">{sub}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Home / Away win rate */}
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="bg-white/[0.03] rounded-xl p-2.5">
+            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Home Win%</div>
+            <div className="text-lg font-black text-indigo-400">{homeWR}%</div>
+            <div className="text-[8px] text-slate-600">{homeMatches.length} games</div>
+          </div>
+          <div className="bg-white/[0.03] rounded-xl p-2.5">
+            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-1">Away Win%</div>
+            <div className="text-lg font-black text-orange-400">{awayWR}%</div>
+            <div className="text-[8px] text-slate-600">{awayMatches.length} games</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <TeamFormCard recent={homeLast20} teamName={homeTeam} />
+      <TeamFormCard recent={awayLast20} teamName={awayTeam} />
+    </div>
+  );
+}
+
+// ── 탭: 리그 순위표 ───────────────────────────────────────────────────────────
+export function StandingsTab({ leagueId, season, homeTeam, awayTeam }: {
+  leagueId: number | null;
+  season: number | null;
+  homeTeam: string;
+  awayTeam: string;
+}) {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!leagueId || !season) return;
+    setLoading(true);
+    setError(null);
+    fetch(`/api/standings?league=${leagueId}&season=${season}`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setData(d); else setError(d.message ?? 'Failed'); })
+      .catch(() => setError('Network error'))
+      .finally(() => setLoading(false));
+  }, [leagueId, season]);
+
+  if (!leagueId || !season) {
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">No league info available</div>;
+  }
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-16 text-slate-500">
+        <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+        <span className="text-sm font-black">Loading standings...</span>
+      </div>
+    );
+  }
+  if (error || !data) {
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">{error ?? 'No data'}</div>;
+  }
+
+  const table: any[] = data.standings?.[0] ?? [];
+
+  return (
+    <div className="space-y-3">
+      {data.leagueInfo && (
+        <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+          {data.leagueInfo.name} · {data.leagueInfo.season}
+        </div>
+      )}
+
+      {/* header */}
+      <div className="flex items-center gap-1 px-2 py-1 text-[8px] font-black text-slate-700 uppercase">
+        <span className="w-5 shrink-0 text-center">#</span>
+        <span className="flex-1">Team</span>
+        <span className="w-6 text-center shrink-0">P</span>
+        <span className="w-6 text-center shrink-0">W</span>
+        <span className="w-6 text-center shrink-0">D</span>
+        <span className="w-6 text-center shrink-0">L</span>
+        <span className="w-8 text-center shrink-0">GD</span>
+        <span className="w-7 text-center shrink-0">Pts</span>
+      </div>
+
+      <div className="space-y-0.5">
+        {table.map((t: any) => {
+          const isHome = t.team === homeTeam;
+          const isAway = t.team === awayTeam;
+          return (
+            <div
+              key={t.rank}
+              className={`flex items-center gap-1 px-2 py-2 rounded-xl border transition-colors ${
+                isHome ? 'bg-indigo-500/10 border-indigo-500/30' :
+                isAway ? 'bg-orange-500/10 border-orange-500/30' :
+                'bg-white/[0.03] border-white/5'
+              }`}
+            >
+              <span className={`w-5 text-center text-[11px] font-black shrink-0 ${isHome || isAway ? 'text-white' : 'text-slate-600'}`}>
+                {t.rank}
+              </span>
+              <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                {t.logo && (
+                  <img src={t.logo} alt="" className="w-4 h-4 object-contain shrink-0"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                )}
+                <span className={`text-[11px] font-black truncate ${isHome || isAway ? 'text-white' : 'text-slate-400'}`}>{t.team}</span>
+              </div>
+              <span className="w-6 text-center text-[11px] tabular-nums shrink-0 text-slate-500">{t.played}</span>
+              <span className="w-6 text-center text-[11px] tabular-nums shrink-0 text-emerald-400">{t.win}</span>
+              <span className="w-6 text-center text-[11px] tabular-nums shrink-0 text-slate-500">{t.draw}</span>
+              <span className="w-6 text-center text-[11px] tabular-nums shrink-0 text-red-400">{t.lose}</span>
+              <span className={`w-8 text-center text-[11px] tabular-nums shrink-0 font-bold ${t.goalsDiff > 0 ? 'text-emerald-400' : t.goalsDiff < 0 ? 'text-red-400' : 'text-slate-500'}`}>
+                {t.goalsDiff > 0 ? '+' : ''}{t.goalsDiff}
+              </span>
+              <span className={`w-7 text-center text-[12px] tabular-nums font-black shrink-0 ${isHome || isAway ? 'text-white' : 'text-slate-300'}`}>
+                {t.points}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="text-[9px] text-slate-700 text-center font-bold mt-2">
+        🔵 Home · 🟠 Away
+      </div>
+    </div>
+  );
+}
+
+// ── 탭: 이 경기 탑 선수 ───────────────────────────────────────────────────────
+export function TopPlayersTab({ playerStatsMap, lineups }: {
+  playerStatsMap: Record<number, any>;
+  lineups: any[];
+}) {
+  if (!playerStatsMap || Object.keys(playerStatsMap).length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-600 text-sm font-bold">
+        No player stats (available after match)
+      </div>
+    );
+  }
+
+  const ratingColor = (r: string | null) => {
+    if (!r) return 'text-slate-500';
+    const v = parseFloat(r);
+    if (v >= 8)  return 'text-amber-400';
+    if (v >= 7)  return 'text-emerald-400';
+    if (v >= 6)  return 'text-blue-400';
+    return 'text-red-400';
+  };
+
+  const homeTeamId = lineups?.[0]?.teamId;
+
+  const allPlayers = Object.entries(playerStatsMap)
+    .map(([id, s]) => ({ id: parseInt(id), ...s }))
+    .filter(p => p.rating != null)
+    .sort((a, b) => parseFloat(b.rating) - parseFloat(a.rating));
+
+  const scorers = Object.entries(playerStatsMap)
+    .map(([id, s]) => ({ id: parseInt(id), ...s }))
+    .filter(p => (p.goals ?? 0) > 0 || (p.assists ?? 0) > 0)
+    .sort((a, b) => ((b.goals ?? 0) * 2 + (b.assists ?? 0)) - ((a.goals ?? 0) * 2 + (a.assists ?? 0)));
+
+  return (
+    <div className="space-y-5">
+      {/* Goals & Assists */}
+      {scorers.length > 0 && (
+        <div>
+          <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">⚽ Goals & Assists</div>
+          <div className="space-y-1.5">
+            {scorers.map(p => (
+              <div key={p.id} className="flex items-center gap-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl px-3 py-2.5">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[12px] font-black text-white truncate">{p.name}</div>
+                  <div className={`text-[9px] font-bold ${p.teamId === homeTeamId ? 'text-indigo-400' : 'text-orange-400'}`}>{p.team}</div>
+                </div>
+                <div className="flex items-center gap-3">
+                  {(p.goals ?? 0) > 0 && (
+                    <div className="text-center">
+                      <div className="text-base font-black text-emerald-400">{p.goals}</div>
+                      <div className="text-[8px] text-slate-600">Goals</div>
+                    </div>
+                  )}
+                  {(p.assists ?? 0) > 0 && (
+                    <div className="text-center">
+                      <div className="text-base font-black text-indigo-400">{p.assists}</div>
+                      <div className="text-[8px] text-slate-600">Ast</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Match Ratings leaderboard */}
+      <div>
+        <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">⭐ Match Ratings</div>
+        <div className="space-y-1">
+          {allPlayers.slice(0, 11).map((p, i) => (
+            <div key={p.id} className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2">
+              <span className="w-5 text-[11px] font-black text-slate-600 text-center shrink-0">{i + 1}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[11px] font-black text-white truncate">{p.name}</div>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] font-bold ${p.teamId === homeTeamId ? 'text-indigo-400' : 'text-orange-400'}`}>
+                    {p.teamId === homeTeamId ? 'HM' : 'AW'}
+                  </span>
+                  {p.minutesPlayed != null && (
+                    <span className="text-[8px] text-slate-600">{p.minutesPlayed}'</span>
+                  )}
+                  {(p.goals ?? 0) > 0 && <span className="text-[8px] text-emerald-400">{p.goals}G</span>}
+                  {(p.assists ?? 0) > 0 && <span className="text-[8px] text-indigo-400">{p.assists}A</span>}
+                </div>
+              </div>
+              <div className={`text-lg font-black tabular-nums ${ratingColor(p.rating)}`}>
+                {parseFloat(p.rating).toFixed(1)}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

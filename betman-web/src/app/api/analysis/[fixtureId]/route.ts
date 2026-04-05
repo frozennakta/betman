@@ -251,12 +251,39 @@ export async function GET(
     const homeLast20 = normalizeRecent(results.teamHome ?? [], homeTeamId);
     const awayLast20 = normalizeRecent(results.teamAway ?? [], awayTeamId);
 
+    const leagueId = p?.league?.id ?? null;
+
     const playerRatings: Record<number, string> = {};
+    const playerStatsMap: Record<number, any> = {};
     if (plRaw.length > 0) {
       for (const team of plRaw) {
-        for (const pStat of team.players ?? []) {
-          const rating = pStat.statistics?.[0]?.games?.rating;
+        for (const pStat of (team.players ?? [])) {
+          const s = pStat.statistics?.[0];
+          if (!s) continue;
+          const rating = s.games?.rating;
           if (rating) playerRatings[pStat.player.id] = rating;
+          playerStatsMap[pStat.player.id] = {
+            name:           pStat.player?.name ?? null,
+            rating:         s.games?.rating ?? null,
+            minutesPlayed:  s.games?.minutes ?? null,
+            goals:          s.goals?.total ?? null,
+            assists:        s.goals?.assists ?? null,
+            shots:          s.shots?.total ?? null,
+            shotsOnTarget:  s.shots?.on ?? null,
+            passes:         s.passes?.total ?? null,
+            passAccuracy:   s.passes?.accuracy ?? null,
+            keyPasses:      s.passes?.key ?? null,
+            dribbles:       s.dribbles?.attempts ?? null,
+            tackles:        s.tackles?.total ?? null,
+            duelsWon:       s.duels?.won ?? null,
+            foulsDrawn:     s.fouls?.drawn ?? null,
+            foulsCommitted: s.fouls?.committed ?? null,
+            yellowCards:    s.cards?.yellow ?? null,
+            redCards:       s.cards?.red ?? null,
+            saves:          s.goalkeeper?.saves ?? null,
+            team:           team.team?.name ?? null,
+            teamId:         team.team?.id ?? null,
+          };
         }
       }
     }
@@ -292,7 +319,7 @@ export async function GET(
       ? 24 * 60 * 60 * 1000  // 종료 경기: 24시간
       : 5 * 60 * 1000;        // 예정/진행: 5분
 
-    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20, playerRatings, preMatchOdds, allBookmakerOdds, xgHome, xgAway };
+    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, leagueId, homeLast20, awayLast20, playerRatings, playerStatsMap, preMatchOdds, allBookmakerOdds, xgHome, xgAway };
     memCache.set(fixtureId, { data, ts: Date.now(), ttl });
     writeCache(`analysis_${fixtureId}`, data, ttl);
     return NextResponse.json({ success: true, ...data, _debug: debugInfo });

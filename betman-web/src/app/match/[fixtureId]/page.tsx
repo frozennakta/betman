@@ -6,11 +6,11 @@ import { Loader2, ArrowLeft, Star, MapPin, User, Thermometer, Wind } from 'lucid
 import {
   countryFlag, STATUS_LABEL,
   AnalysisTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab,
-  CommentaryTab, OddsTab, PlayerStatCard
+  CommentaryTab, OddsTab, PlayerStatCard, FormTab, StandingsTab, TopPlayersTab
 } from '@/components/AnalysisTabs';
 import html2canvas from 'html2canvas';
 
-const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Commentary', 'Odds', 'Notes', 'Chat'] as const;
+const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Form', 'Standings', 'Top', 'Commentary', 'Odds', 'Notes', 'Chat'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -227,6 +227,13 @@ export default function MatchPage() {
                         {homeReds > 0 && <span className="ml-1">{Array.from({length: homeReds}).map((_, i) => <span key={i}>🟥</span>)}</span>}
                       </div>
                       {homeFormation && <div className="text-[10px] font-black text-indigo-400 mt-0.5 text-right">{homeFormation}</div>}
+                      {analysis?.homeLast20?.length > 0 && (
+                        <div className="flex gap-0.5 mt-1 justify-end">
+                          {analysis.homeLast20.slice(0, 5).map((m: any, i: number) => (
+                            <span key={i} className={`w-4 h-4 rounded text-[8px] font-black flex items-center justify-center ${m.result === 'W' ? 'bg-emerald-500/30 text-emerald-400' : m.result === 'D' ? 'bg-slate-500/30 text-slate-400' : 'bg-red-500/30 text-red-400'}`}>{m.result}</span>
+                          ))}
+                        </div>
+                      )}
                       <div className="text-[10px] font-black text-slate-600 mt-0.5">Home</div>
                     </div>
                     {homeLogo && (
@@ -263,6 +270,13 @@ export default function MatchPage() {
                         {game.awayTeam}
                       </div>
                       {awayFormation && <div className="text-[10px] font-black text-orange-400 mt-0.5">{awayFormation}</div>}
+                      {analysis?.awayLast20?.length > 0 && (
+                        <div className="flex gap-0.5 mt-1">
+                          {analysis.awayLast20.slice(0, 5).map((m: any, i: number) => (
+                            <span key={i} className={`w-4 h-4 rounded text-[8px] font-black flex items-center justify-center ${m.result === 'W' ? 'bg-emerald-500/30 text-emerald-400' : m.result === 'D' ? 'bg-slate-500/30 text-slate-400' : 'bg-red-500/30 text-red-400'}`}>{m.result}</span>
+                          ))}
+                        </div>
+                      )}
                       <div className="text-[10px] font-black text-slate-600 mt-0.5">Away</div>
                     </div>
                   </div>
@@ -474,15 +488,18 @@ export default function MatchPage() {
             </div>
           ) : analysis ? (
             <>
-              {tab === 'Analysis'    && <AnalysisTab   analysis={analysis} game={fullGame} />}
-              {tab === 'Predict'    && <PoissonTab    analysis={analysis} game={fullGame} />}
-              {tab === 'Lineup'     && <LineupTab     lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} onPlayerClick={(p: any) => setSelectedPlayer(p)} />}
-              {tab === 'Absences'   && <InjuriesTab   injuries={analysis.injuries ?? []} game={fullGame} />}
-              {tab === 'Stats'      && <StatsTab      statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} />}
-              {tab === 'Commentary' && <CommentaryTab events={analysis.events ?? []} game={fullGame} />}
-              {tab === 'Odds'       && <OddsTab       allBookmakerOdds={analysis.allBookmakerOdds ?? []} game={fullGame} />}
-              {tab === 'Notes'      && <MemoTab       fixtureId={fixtureId} />}
-              {tab === 'Chat'       && <ChatTab       fixtureId={fixtureId} />}
+              {tab === 'Analysis'   && <AnalysisTab    analysis={analysis} game={fullGame} />}
+              {tab === 'Predict'    && <PoissonTab     analysis={analysis} game={fullGame} />}
+              {tab === 'Lineup'     && <LineupTab      lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} playerStatsMap={analysis.playerStatsMap ?? {}} onPlayerClick={(p: any) => setSelectedPlayer(p)} />}
+              {tab === 'Absences'   && <InjuriesTab    injuries={analysis.injuries ?? []} game={fullGame} />}
+              {tab === 'Stats'      && <StatsTab       statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} />}
+              {tab === 'Form'       && <FormTab        homeLast20={analysis.homeLast20 ?? []} awayLast20={analysis.awayLast20 ?? []} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
+              {tab === 'Standings'  && <StandingsTab   leagueId={analysis.leagueId ?? null} season={analysis.season ?? null} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
+              {tab === 'Top'        && <TopPlayersTab  playerStatsMap={analysis.playerStatsMap ?? {}} lineups={analysis.lineups ?? []} />}
+              {tab === 'Commentary' && <CommentaryTab  events={analysis.events ?? []} game={fullGame} />}
+              {tab === 'Odds'       && <OddsTab        allBookmakerOdds={analysis.allBookmakerOdds ?? []} game={fullGame} />}
+              {tab === 'Notes'      && <MemoTab        fixtureId={fixtureId} />}
+              {tab === 'Chat'       && <ChatTab        fixtureId={fixtureId} />}
             </>
           ) : (
             <div className="py-16 text-center">
