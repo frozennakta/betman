@@ -6,11 +6,11 @@ import { Loader2, ArrowLeft, Star, MapPin, User, Thermometer, Wind } from 'lucid
 import {
   countryFlag, STATUS_LABEL,
   AnalysisTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab,
-  CommentaryTab, OddsTab, PlayerStatCard, FormTab, StandingsTab, TopPlayersTab
+  OddsTab, PlayerStatCard, FormTab, StandingsTab
 } from '@/components/AnalysisTabs';
 import html2canvas from 'html2canvas';
 
-const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Form', 'Standings', 'Top', 'Commentary', 'Odds', 'Notes', 'Chat'] as const;
+const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Form', 'Standings', 'Odds', 'Notes', 'Chat'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -495,8 +495,6 @@ export default function MatchPage() {
               {tab === 'Stats'      && <StatsTab       statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} />}
               {tab === 'Form'       && <FormTab        homeLast20={analysis.homeLast20 ?? []} awayLast20={analysis.awayLast20 ?? []} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
               {tab === 'Standings'  && <StandingsTab   leagueId={analysis.leagueId ?? null} season={analysis.season ?? null} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
-              {tab === 'Top'        && <TopPlayersTab  playerStatsMap={analysis.playerStatsMap ?? {}} lineups={analysis.lineups ?? []} />}
-              {tab === 'Commentary' && <CommentaryTab  events={analysis.events ?? []} game={fullGame} />}
               {tab === 'Odds'       && <OddsTab        allBookmakerOdds={analysis.allBookmakerOdds ?? []} game={fullGame} />}
               {tab === 'Notes'      && <MemoTab        fixtureId={fixtureId} />}
               {tab === 'Chat'       && <ChatTab        fixtureId={fixtureId} />}
