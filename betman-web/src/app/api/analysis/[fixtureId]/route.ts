@@ -80,12 +80,11 @@ export async function GET(
       fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
       fetchMap.injuries   = apiFetch(`/injuries?fixture=${fixtureId}`);
       fetchMap.players    = apiFetch(`/fixtures/players?fixture=${fixtureId}`);
-      fetchMap.odds       = apiFetch(`/odds?fixture=${fixtureId}&bookmaker=8`);
+      fetchMap.odds       = apiFetch(`/odds?fixture=${fixtureId}`); // 전체 북메이커
     } else {
-      // 예정 경기: prediction만
       fetchMap.predictions = apiFetch(`/predictions?fixture=${fixtureId}`);
       fetchMap.injuries   = apiFetch(`/injuries?fixture=${fixtureId}`);
-      fetchMap.odds       = apiFetch(`/odds?fixture=${fixtureId}&bookmaker=8`);
+      fetchMap.odds       = apiFetch(`/odds?fixture=${fixtureId}`); // 전체 북메이커
     }
 
     const keys = Object.keys(fetchMap);
@@ -262,22 +261,38 @@ export async function GET(
       }
     }
 
+    // 멀티 북메이커 배당 (Match Winner)
     let preMatchOdds = null;
+    const allBookmakerOdds: { bookmaker: string; home: string | null; draw: string | null; away: string | null }[] = [];
     if (oddsRaw.length > 0) {
-      const bookmaker = oddsRaw[0].bookmakers?.[0];
-      if (bookmaker) {
-        const matchWinner = bookmaker.bets?.find((b: any) => b.id === 1 || b.name === 'Match Winner');
-        if (matchWinner) {
-          preMatchOdds = matchWinner.values.map((v: any) => ({ value: v.value, odd: v.odd }));
+      for (const item of oddsRaw) {
+        for (const bm of (item.bookmakers ?? [])) {
+          const matchWinner = bm.bets?.find((b: any) => b.id === 1 || b.name === 'Match Winner');
+          if (!matchWinner) continue;
+          const vals = matchWinner.values ?? [];
+          allBookmakerOdds.push({
+            bookmaker: bm.name,
+            home: vals.find((v: any) => v.value === 'Home')?.odd ?? null,
+            draw: vals.find((v: any) => v.value === 'Draw')?.odd ?? null,
+            away: vals.find((v: any) => v.value === 'Away')?.odd ?? null,
+          });
+          // 첫 번째 북메이커를 기존 preMatchOdds로 유지
+          if (!preMatchOdds) {
+            preMatchOdds = matchWinner.values.map((v: any) => ({ value: v.value, odd: v.odd }));
+          }
         }
       }
     }
+
+    // xG 데이터 추출 (statistics에서)
+    const xgHome = results.statistics?.[0]?.stats?.find((s: any) => s.type === 'expected_goals')?.value ?? null;
+    const xgAway = results.statistics?.[1]?.stats?.find((s: any) => s.type === 'expected_goals')?.value ?? null;
 
     const ttl = shortStatus === 'FT' || shortStatus === 'AET' || shortStatus === 'PEN'
       ? 24 * 60 * 60 * 1000  // 종료 경기: 24시간
       : 5 * 60 * 1000;        // 예정/진행: 5분
 
-    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20, playerRatings, preMatchOdds };
+    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, homeLast20, awayLast20, playerRatings, preMatchOdds, allBookmakerOdds, xgHome, xgAway };
     memCache.set(fixtureId, { data, ts: Date.now(), ttl });
     writeCache(`analysis_${fixtureId}`, data, ttl);
     return NextResponse.json({ success: true, ...data, _debug: debugInfo });

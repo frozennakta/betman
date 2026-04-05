@@ -273,7 +273,7 @@ export function EventsTab({ events }: { events: any[] }) {
 }
 
 // ── 탭: 스탯 ──────────────────────────────────────────────────────────────────
-export function StatsTab({ statistics }: { statistics: any[] }) {
+export function StatsTab({ statistics, xgHome, xgAway }: { statistics: any[]; xgHome?: string | null; xgAway?: string | null }) {
   if (!statistics || statistics.length < 2) {
     return <div className="py-12 text-center text-slate-600 text-sm font-bold">No stats (pre-match or unsupported)</div>;
   }
@@ -281,49 +281,139 @@ export function StatsTab({ statistics }: { statistics: any[] }) {
   const awayStats = statistics[1];
   const homeMap = Object.fromEntries((homeStats.stats ?? []).map((s: any) => [s.type, s.value]));
   const awayMap = Object.fromEntries((awayStats.stats ?? []).map((s: any) => [s.type, s.value]));
-  const rows = [
-    ['Ball Possession', 'Possession'], ['Total Shots', 'Shots'], ['Shots on Goal', 'On Target'],
-    ['Shots off Goal', 'Off Target'], ['Blocked Shots', 'Blocked'], ['Corner Kicks', 'Corners'],
-    ['Fouls', 'Fouls'], ['Yellow Cards', 'Yellows'], ['Red Cards', 'Reds'],
-    ['Goalkeeper Saves', 'Saves'], ['Total passes', 'Total Passes'], ['Passes accurate', 'Accurate Passes'],
-    ['Passes %', 'Pass %'], ['Offsides', 'Offsides'], ['Total attacks', 'Attacks'], ['Dangerous attacks', 'Dangerous']
-  ].filter(([key]) => homeMap[key] != null || awayMap[key] != null);
 
-  // 모멘텀 바 구현용 데이터 추출
   const hDA = parseInt(homeMap['Dangerous attacks']?.toString() || '0');
   const aDA = parseInt(awayMap['Dangerous attacks']?.toString() || '0');
   const hasMomentum = hDA > 0 || aDA > 0;
   const hPct = hasMomentum ? Math.round((hDA / (hDA + aDA)) * 100) : 50;
 
+  const categories = [
+    {
+      label: '⭐ Top Stats',
+      rows: [
+        ['Ball Possession', 'Possession'],
+        ['Total Shots', 'Shots'],
+        ['Shots on Goal', 'On Target'],
+        ['Corner Kicks', 'Corners'],
+        ['Yellow Cards', 'Yellows'],
+        ['Red Cards', 'Reds'],
+      ],
+    },
+    {
+      label: '🎯 Shots',
+      rows: [
+        ['Total Shots', 'Total'],
+        ['Shots on Goal', 'On Target'],
+        ['Shots off Goal', 'Off Target'],
+        ['Blocked Shots', 'Blocked'],
+        ['Shots insidebox', 'Inside Box'],
+        ['Shots outsidebox', 'Outside Box'],
+      ],
+    },
+    {
+      label: '⚔️ Attack',
+      rows: [
+        ['Total attacks', 'Attacks'],
+        ['Dangerous attacks', 'Dangerous'],
+        ['Offsides', 'Offsides'],
+        ['Fouls', 'Fouls'],
+      ],
+    },
+    {
+      label: '🔄 Passes',
+      rows: [
+        ['Total passes', 'Total'],
+        ['Passes accurate', 'Accurate'],
+        ['Passes %', 'Pass %'],
+        ['Ball Possession', 'Possession'],
+      ],
+    },
+    {
+      label: '🛡️ Defence',
+      rows: [
+        ['Goalkeeper Saves', 'Saves'],
+        ['Fouls', 'Fouls'],
+        ['Yellow Cards', 'Yellows'],
+        ['Red Cards', 'Reds'],
+      ],
+    },
+  ];
+
+  const [activeCategory, setActiveCategory] = useState(0);
+  const currentRows = categories[activeCategory].rows.filter(
+    ([key]) => homeMap[key] != null || awayMap[key] != null
+  );
+
   return (
     <div className="space-y-4">
+      {/* 모멘텀 바 */}
       {hasMomentum && (
         <div className="bg-gradient-to-r from-emerald-500/10 via-black to-orange-500/10 p-4 rounded-2xl border border-white/5 relative overflow-hidden">
-          <div className="absolute top-0 left-[50%] w-[1px] h-full bg-white/20 z-0"></div>
-          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-3">Live Match Momentum (Attacks)</div>
-          <div className="flex justify-between items-end mb-2 relative z-10 text-white font-black text-lg">
+          <div className="absolute top-0 left-[50%] w-[1px] h-full bg-white/20 z-0" />
+          <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center mb-3">Live Momentum (Dangerous Attacks)</div>
+          <div className="flex justify-between mb-2 relative z-10 font-black text-lg">
             <span className="text-emerald-400">{hDA}</span>
             <span className="text-orange-400">{aDA}</span>
           </div>
           <div className="flex h-3 rounded-full overflow-hidden bg-white/5 relative z-10 shadow-inner">
-            <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-1000 ease-in-out relative" style={{ width: `${hPct}%` }}>
-              {hPct > 60 && <div className="absolute right-0 top-0 bottom-0 w-10 bg-white/30 blur-md pointer-events-none animate-pulse"></div>}
+            <div className="bg-gradient-to-r from-emerald-600 to-emerald-400 transition-all duration-1000 relative" style={{ width: `${hPct}%` }}>
+              {hPct > 60 && <div className="absolute right-0 inset-y-0 w-10 bg-white/30 blur-md animate-pulse pointer-events-none" />}
             </div>
-            <div className="bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-1000 ease-in-out relative" style={{ width: `${100 - hPct}%` }}>
-              {hPct < 40 && <div className="absolute left-0 top-0 bottom-0 w-10 bg-white/30 blur-md pointer-events-none animate-pulse"></div>}
+            <div className="bg-gradient-to-r from-orange-400 to-orange-600 transition-all duration-1000 relative" style={{ width: `${100 - hPct}%` }}>
+              {hPct < 40 && <div className="absolute left-0 inset-y-0 w-10 bg-white/30 blur-md animate-pulse pointer-events-none" />}
             </div>
           </div>
         </div>
       )}
 
+      {/* xG 카드 */}
+      {(xgHome || xgAway) && (
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl py-3">
+            <div className="text-xl font-black text-emerald-400">{xgHome ?? '–'}</div>
+            <div className="text-[9px] font-black text-slate-600 uppercase mt-1">xG Home</div>
+          </div>
+          <div className="bg-black/20 border border-white/5 rounded-2xl py-3 flex flex-col items-center justify-center">
+            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Expected</div>
+            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Goals</div>
+          </div>
+          <div className="bg-orange-500/10 border border-orange-500/20 rounded-2xl py-3">
+            <div className="text-xl font-black text-orange-400">{xgAway ?? '–'}</div>
+            <div className="text-[9px] font-black text-slate-600 uppercase mt-1">xG Away</div>
+          </div>
+        </div>
+      )}
+
+      {/* 카테고리 탭 */}
+      <div className="flex gap-1 overflow-x-auto no-scrollbar pb-1">
+        {categories.map((cat, i) => (
+          <button
+            key={cat.label}
+            onClick={() => setActiveCategory(i)}
+            className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-black transition-all whitespace-nowrap ${
+              activeCategory === i
+                ? 'bg-indigo-500 text-white'
+                : 'bg-white/5 text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
+      {/* 스탯 바 */}
       <div className="bg-black/20 rounded-2xl p-4 border border-white/5 space-y-3">
         <div className="flex justify-between text-[10px] font-black mb-1">
           <span className="text-emerald-400 truncate">{homeStats.team}</span>
           <span className="text-orange-400 truncate text-right">{awayStats.team}</span>
         </div>
-        {rows.map(([key, label]) => (
-          <StatBar key={key} label={label} home={homeMap[key]} away={awayMap[key]} />
-        ))}
+        {currentRows.length > 0 ? (
+          currentRows.map(([key, label]) => (
+            <StatBar key={key} label={label} home={homeMap[key]} away={awayMap[key]} />
+          ))
+        ) : (
+          <div className="py-4 text-center text-[11px] text-slate-600 font-bold">No data for this category</div>
+        )}
       </div>
     </div>
   );
@@ -409,14 +499,14 @@ function PitchView({ lineup }: { lineup: any }) {
   );
 }
 
-export function LineupTab({ lineups, playerRatings = {} }: { lineups: any[], playerRatings?: Record<number, string> }) {
+export function LineupTab({ lineups, playerRatings = {}, onPlayerClick }: { lineups: any[], playerRatings?: Record<number, string>, onPlayerClick?: (p: any) => void }) {
   if (!lineups || lineups.length === 0) {
     return <div className="py-12 text-center text-slate-600 text-sm font-bold">Lineup not announced</div>;
   }
   const hasVisual = lineups.some(l => l.formation && (l.startXI ?? []).some((p: any) => p.grid));
   return (
     <div className="space-y-6">
-      {/* 시각적 피치 (데이터 있을 때) */}
+      {/* 시각적 피치 */}
       {hasVisual && (
         <div className="grid grid-cols-2 gap-3">
           {lineups.slice(0, 2).map((l) => (
@@ -431,6 +521,10 @@ export function LineupTab({ lineups, playerRatings = {} }: { lineups: any[], pla
             </div>
           ))}
         </div>
+      )}
+
+      {onPlayerClick && (
+        <div className="text-[9px] font-bold text-slate-600 text-center">Tap a player to see stats</div>
       )}
 
       {/* 상세 리스트 */}
@@ -451,7 +545,11 @@ export function LineupTab({ lineups, playerRatings = {} }: { lineups: any[], pla
             <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Starting XI</div>
             <div className="grid grid-cols-2 gap-1">
               {l.startXI.map((p: any) => (
-                <div key={p.number} className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5">
+                <div
+                  key={p.number}
+                  className={`flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all' : ''}`}
+                  onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id] })}
+                >
                   <span className="text-[10px] font-black text-slate-500 w-5 text-right tabular-nums shrink-0">{p.number}</span>
                   <span className={`text-[9px] font-black px-1 rounded shrink-0 ${
                     p.pos === 'G' ? 'text-yellow-400 bg-yellow-500/10' :
@@ -474,7 +572,11 @@ export function LineupTab({ lineups, playerRatings = {} }: { lineups: any[], pla
               <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Substitutes</div>
               <div className="grid grid-cols-2 gap-1">
                 {l.substitutes.map((p: any) => (
-                  <div key={p.number} className="flex items-center gap-2 px-2 py-1">
+                  <div
+                    key={p.number}
+                    className={`flex items-center gap-2 px-2 py-1 rounded-lg ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
+                    onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id] })}
+                  >
                     <span className="text-[10px] font-black text-slate-600 w-5 text-right tabular-nums shrink-0">{p.number}</span>
                     <span className="text-xs text-slate-500 truncate">{p.name}</span>
                     {playerRatings[p.id] && (
@@ -1063,6 +1165,240 @@ export function MemoTab({ fixtureId }: { fixtureId: string }) {
           Clear Notes
         </button>
       )}
+    </div>
+  );
+}
+
+// ── 탭: 라이브 코멘터리 ────────────────────────────────────────────────────────
+export function CommentaryTab({ events, game }: { events: any[]; game: any }) {
+  if (!events || events.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-600 text-sm font-bold">
+        No commentary (pre-match or data unavailable)
+      </div>
+    );
+  }
+
+  const icon = (type: string, detail: string) => {
+    if (type === 'Goal') return detail?.includes('Penalty') ? '⚽🎯' : detail?.includes('Own') ? '⚽🔴' : '⚽';
+    if (type === 'Card') return detail?.includes('Red') ? '🟥' : '🟨';
+    if (type === 'subst') return '🔄';
+    if (type === 'Var') return '📺';
+    return '•';
+  };
+
+  const bgColor = (type: string, detail: string) => {
+    if (type === 'Goal') return 'bg-emerald-500/10 border-emerald-500/20';
+    if (type === 'Card' && detail?.includes('Red')) return 'bg-red-500/10 border-red-500/20';
+    if (type === 'Card') return 'bg-yellow-500/10 border-yellow-500/20';
+    if (type === 'subst') return 'bg-blue-500/10 border-blue-500/10';
+    return 'bg-white/[0.03] border-white/5';
+  };
+
+  const sorted = [...events].sort((a, b) => {
+    const am = (a.minute ?? 0) + (a.extra ?? 0) * 0.01;
+    const bm = (b.minute ?? 0) + (b.extra ?? 0) * 0.01;
+    return bm - am; // 최신순
+  });
+
+  return (
+    <div className="space-y-2">
+      <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-3">
+        Latest first · {events.length} events
+      </div>
+      {sorted.map((e, i) => {
+        const isHome = e.team === game.homeTeam;
+        return (
+          <div key={i} className={`flex gap-3 rounded-xl px-3 py-2.5 border ${bgColor(e.type, e.detail)}`}>
+            {/* 분 */}
+            <div className="shrink-0 w-10 text-center">
+              <span className="text-[11px] font-black text-slate-400 tabular-nums">
+                {e.minute}{e.extra ? `+${e.extra}` : ''}'
+              </span>
+            </div>
+            {/* 아이콘 */}
+            <span className="text-base shrink-0">{icon(e.type, e.detail)}</span>
+            {/* 내용 */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-black text-white">{e.player}</span>
+                <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${isHome ? 'bg-indigo-500/20 text-indigo-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                  {isHome ? 'HM' : 'AW'}
+                </span>
+              </div>
+              {e.assist && (
+                <div className="text-[10px] text-slate-500 mt-0.5">
+                  {e.type === 'subst' ? '↑ In: ' : 'Assist: '}<span className="text-slate-400">{e.assist}</span>
+                </div>
+              )}
+              <div className="text-[9px] text-slate-600 mt-0.5">{e.detail}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── 탭: 배당률 비교 (멀티 북메이커) ──────────────────────────────────────────
+export function OddsTab({ allBookmakerOdds, game }: { allBookmakerOdds: any[]; game: any }) {
+  if (!allBookmakerOdds || allBookmakerOdds.length === 0) {
+    return (
+      <div className="py-12 text-center text-slate-600 text-sm font-bold">
+        No odds data available
+      </div>
+    );
+  }
+
+  // 평균 배당 계산
+  const valids = allBookmakerOdds.filter(o => o.home && o.draw && o.away);
+  const avg = valids.length > 0 ? {
+    home: (valids.reduce((s, o) => s + parseFloat(o.home), 0) / valids.length).toFixed(2),
+    draw: (valids.reduce((s, o) => s + parseFloat(o.draw), 0) / valids.length).toFixed(2),
+    away: (valids.reduce((s, o) => s + parseFloat(o.away), 0) / valids.length).toFixed(2),
+  } : null;
+
+  // 최고 배당
+  const best = {
+    home: valids.reduce((b, o) => parseFloat(o.home) > parseFloat(b?.home ?? '0') ? o : b, valids[0]),
+    draw: valids.reduce((b, o) => parseFloat(o.draw) > parseFloat(b?.draw ?? '0') ? o : b, valids[0]),
+    away: valids.reduce((b, o) => parseFloat(o.away) > parseFloat(b?.away ?? '0') ? o : b, valids[0]),
+  };
+
+  const OddCell = ({ val, isBest }: { val: string | null; isBest?: boolean }) => (
+    <span className={`text-[12px] font-black tabular-nums ${isBest ? 'text-emerald-400' : 'text-slate-300'}`}>
+      {val ?? '–'}
+    </span>
+  );
+
+  return (
+    <div className="space-y-4">
+      {/* 평균 + 베스트 요약 */}
+      {avg && (
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: game.homeTeam, val: avg.home, color: 'text-indigo-400' },
+            { label: 'Draw', val: avg.draw, color: 'text-slate-400' },
+            { label: game.awayTeam, val: avg.away, color: 'text-orange-400' },
+          ].map(({ label, val, color }) => (
+            <div key={label} className="bg-black/30 rounded-2xl p-3 border border-white/5 text-center">
+              <div className={`text-xl font-black ${color}`}>{val}</div>
+              <div className="text-[8px] font-black text-slate-600 uppercase mt-1 truncate">Avg · {label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 헤더 */}
+      <div className="flex items-center gap-2 px-3 py-1">
+        <span className="flex-1 text-[9px] font-black text-slate-600 uppercase">Bookmaker</span>
+        <span className="w-14 text-[9px] font-black text-indigo-400 uppercase text-center">Home</span>
+        <span className="w-14 text-[9px] font-black text-slate-500 uppercase text-center">Draw</span>
+        <span className="w-14 text-[9px] font-black text-orange-400 uppercase text-center">Away</span>
+      </div>
+
+      {/* 북메이커 리스트 */}
+      <div className="space-y-1">
+        {allBookmakerOdds.map((o, i) => (
+          <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
+            <span className="flex-1 text-[11px] font-bold text-slate-400 truncate">{o.bookmaker}</span>
+            <span className="w-14 text-center">
+              <OddCell val={o.home} isBest={best.home?.bookmaker === o.bookmaker} />
+            </span>
+            <span className="w-14 text-center">
+              <OddCell val={o.draw} isBest={best.draw?.bookmaker === o.bookmaker} />
+            </span>
+            <span className="w-14 text-center">
+              <OddCell val={o.away} isBest={best.away?.bookmaker === o.bookmaker} />
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-[9px] text-slate-700 text-center font-bold">
+        🟢 Green = best available odd · {allBookmakerOdds.length} bookmakers
+      </div>
+    </div>
+  );
+}
+
+// ── 선수 스탯 카드 팝업 ────────────────────────────────────────────────────────
+export function PlayerStatCard({ player, onClose }: { player: any; onClose: () => void }) {
+  const rating = player.rating ? parseFloat(player.rating) : null;
+  const ratingColor = rating == null ? 'text-slate-500'
+    : rating >= 8 ? 'text-amber-400'
+    : rating >= 7 ? 'text-emerald-400'
+    : rating >= 6 ? 'text-blue-400'
+    : 'text-red-400';
+
+  const stats = player.stats ?? {};
+
+  const rows = [
+    { label: 'Minutes', val: stats.minutesPlayed },
+    { label: 'Goals', val: stats.goals },
+    { label: 'Assists', val: stats.assists },
+    { label: 'Shots', val: stats.shots },
+    { label: 'Shots on Target', val: stats.shotsOnTarget },
+    { label: 'Key Passes', val: stats.keyPasses },
+    { label: 'Passes', val: stats.passes },
+    { label: 'Pass Accuracy', val: stats.passAccuracy != null ? `${stats.passAccuracy}%` : null },
+    { label: 'Dribbles', val: stats.dribbles },
+    { label: 'Tackles', val: stats.tackles },
+    { label: 'Duels Won', val: stats.duelsWon },
+    { label: 'Fouls Drawn', val: stats.foulsDrawn },
+    { label: 'Fouls Committed', val: stats.foulsCommitted },
+    { label: 'Yellow Cards', val: stats.yellowCards },
+    { label: 'Red Cards', val: stats.redCards },
+  ].filter(r => r.val != null && r.val !== 0);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <div
+        className="relative bg-[#1a1a2e] border border-white/10 rounded-3xl p-5 w-full max-w-sm shadow-2xl z-10 max-h-[80vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* 헤더 */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="text-base font-black text-white">{player.name}</div>
+            <div className="flex items-center gap-2 mt-1">
+              <span className={`text-[10px] font-black px-2 py-0.5 rounded ${
+                player.pos === 'G' ? 'bg-yellow-500/20 text-yellow-400' :
+                player.pos === 'D' ? 'bg-blue-500/20 text-blue-400' :
+                player.pos === 'M' ? 'bg-emerald-500/20 text-emerald-400' :
+                'bg-red-500/20 text-red-400'
+              }`}>{player.pos === 'G' ? 'GK' : player.pos === 'D' ? 'DF' : player.pos === 'M' ? 'MF' : 'FW'}</span>
+              <span className="text-[10px] text-slate-500 font-bold">#{player.number}</span>
+              <span className="text-[10px] text-slate-500 font-bold">{player.team}</span>
+            </div>
+          </div>
+          {rating != null && (
+            <div className={`text-2xl font-black ${ratingColor}`}>{rating.toFixed(1)}</div>
+          )}
+        </div>
+
+        {/* 스탯 */}
+        {rows.length > 0 ? (
+          <div className="space-y-2">
+            {rows.map(r => (
+              <div key={r.label} className="flex items-center justify-between py-1.5 border-b border-white/5">
+                <span className="text-[11px] font-bold text-slate-500">{r.label}</span>
+                <span className="text-[12px] font-black text-white tabular-nums">{String(r.val)}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="py-6 text-center text-slate-600 text-sm font-bold">No detailed stats</div>
+        )}
+
+        <button
+          onClick={onClose}
+          className="mt-4 w-full py-2 rounded-xl bg-white/5 text-slate-500 text-[11px] font-black hover:bg-white/10 transition-colors"
+        >
+          Close
+        </button>
+      </div>
     </div>
   );
 }

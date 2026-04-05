@@ -5,11 +5,12 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { Loader2, ArrowLeft, Star, MapPin, User, Thermometer, Wind } from 'lucide-react';
 import {
   countryFlag, STATUS_LABEL,
-  AnalysisTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab
+  AnalysisTab, StatsTab, LineupTab, PoissonTab, MemoTab, InjuriesTab, ChatTab,
+  CommentaryTab, OddsTab, PlayerStatCard
 } from '@/components/AnalysisTabs';
 import html2canvas from 'html2canvas';
 
-const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Notes', 'Chat'] as const;
+const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Commentary', 'Odds', 'Notes', 'Chat'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -114,6 +115,9 @@ export default function MatchPage() {
   useEffect(() => {
     try { setHasNote(!!localStorage.getItem(noteKey)); } catch {}
   }, [noteKey]);
+
+  // 선수 스탯 카드 팝업
+  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
 
   // 날씨
   const [weather, setWeather] = useState<{ emoji: string; label: string; temp: number; wind: number; humidity: number; pressure: number } | null>(null);
@@ -470,13 +474,15 @@ export default function MatchPage() {
             </div>
           ) : analysis ? (
             <>
-              {tab === 'Analysis'   && <AnalysisTab  analysis={analysis} game={fullGame} />}
-              {tab === 'Predict'   && <PoissonTab   analysis={analysis} game={fullGame} />}
-              {tab === 'Lineup' && <LineupTab    lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} />}
-              {tab === 'Absences' && <InjuriesTab  injuries={analysis.injuries ?? []} game={fullGame} />}
-              {tab === 'Stats'   && <StatsTab     statistics={analysis.statistics ?? []} />}
-              {tab === 'Notes'   && <MemoTab      fixtureId={fixtureId} />}
-              {tab === 'Chat'   && <ChatTab      fixtureId={fixtureId} />}
+              {tab === 'Analysis'    && <AnalysisTab   analysis={analysis} game={fullGame} />}
+              {tab === 'Predict'    && <PoissonTab    analysis={analysis} game={fullGame} />}
+              {tab === 'Lineup'     && <LineupTab     lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} onPlayerClick={(p: any) => setSelectedPlayer(p)} />}
+              {tab === 'Absences'   && <InjuriesTab   injuries={analysis.injuries ?? []} game={fullGame} />}
+              {tab === 'Stats'      && <StatsTab      statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} />}
+              {tab === 'Commentary' && <CommentaryTab events={analysis.events ?? []} game={fullGame} />}
+              {tab === 'Odds'       && <OddsTab       allBookmakerOdds={analysis.allBookmakerOdds ?? []} game={fullGame} />}
+              {tab === 'Notes'      && <MemoTab       fixtureId={fixtureId} />}
+              {tab === 'Chat'       && <ChatTab       fixtureId={fixtureId} />}
             </>
           ) : (
             <div className="py-16 text-center">
@@ -494,6 +500,11 @@ export default function MatchPage() {
         {/* 하단 여백 */}
         <div className="h-10" />
       </div>
+
+      {/* 선수 스탯 카드 팝업 */}
+      {selectedPlayer && (
+        <PlayerStatCard player={selectedPlayer} onClose={() => setSelectedPlayer(null)} />
+      )}
     </div>
   );
 }
