@@ -288,24 +288,46 @@ export async function GET(
       }
     }
 
-    // 멀티 북메이커 배당 (Match Winner)
+    // 멀티 북메이커 배당 (Match Winner + Over/Under + BTTS)
     let preMatchOdds = null;
     const allBookmakerOdds: { bookmaker: string; home: string | null; draw: string | null; away: string | null }[] = [];
+    const oddsOverUnder: { bookmaker: string; over: string | null; under: string | null }[] = [];
+    const oddsBTTS: { bookmaker: string; yes: string | null; no: string | null }[] = [];
     if (oddsRaw.length > 0) {
       for (const item of oddsRaw) {
         for (const bm of (item.bookmakers ?? [])) {
-          const matchWinner = bm.bets?.find((b: any) => b.id === 1 || b.name === 'Match Winner');
-          if (!matchWinner) continue;
-          const vals = matchWinner.values ?? [];
-          allBookmakerOdds.push({
-            bookmaker: bm.name,
-            home: vals.find((v: any) => v.value === 'Home')?.odd ?? null,
-            draw: vals.find((v: any) => v.value === 'Draw')?.odd ?? null,
-            away: vals.find((v: any) => v.value === 'Away')?.odd ?? null,
-          });
-          // 첫 번째 북메이커를 기존 preMatchOdds로 유지
-          if (!preMatchOdds) {
-            preMatchOdds = matchWinner.values.map((v: any) => ({ value: v.value, odd: v.odd }));
+          const bets = bm.bets ?? [];
+          const matchWinner = bets.find((b: any) => b.id === 1 || b.name === 'Match Winner');
+          const ouBet      = bets.find((b: any) => b.id === 5 || b.name === 'Goals Over/Under');
+          const bttsBet    = bets.find((b: any) => b.id === 8 || b.name === 'Both Teams Score');
+
+          if (matchWinner) {
+            const vals = matchWinner.values ?? [];
+            allBookmakerOdds.push({
+              bookmaker: bm.name,
+              home: vals.find((v: any) => v.value === 'Home')?.odd ?? null,
+              draw: vals.find((v: any) => v.value === 'Draw')?.odd ?? null,
+              away: vals.find((v: any) => v.value === 'Away')?.odd ?? null,
+            });
+            if (!preMatchOdds) {
+              preMatchOdds = matchWinner.values.map((v: any) => ({ value: v.value, odd: v.odd }));
+            }
+          }
+          if (ouBet) {
+            const vals = ouBet.values ?? [];
+            oddsOverUnder.push({
+              bookmaker: bm.name,
+              over:  vals.find((v: any) => v.value === 'Over 2.5')?.odd  ?? null,
+              under: vals.find((v: any) => v.value === 'Under 2.5')?.odd ?? null,
+            });
+          }
+          if (bttsBet) {
+            const vals = bttsBet.values ?? [];
+            oddsBTTS.push({
+              bookmaker: bm.name,
+              yes: vals.find((v: any) => v.value === 'Yes')?.odd ?? null,
+              no:  vals.find((v: any) => v.value === 'No')?.odd  ?? null,
+            });
           }
         }
       }
@@ -319,7 +341,7 @@ export async function GET(
       ? 24 * 60 * 60 * 1000  // 종료 경기: 24시간
       : 5 * 60 * 1000;        // 예정/진행: 5분
 
-    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, leagueId, homeLast20, awayLast20, playerRatings, playerStatsMap, preMatchOdds, allBookmakerOdds, xgHome, xgAway };
+    const data = { prediction, home, away, comparison, h2h, events: eventList, statistics: statList, lineups: lineupList, injuries: injuryList, season, round, leagueId, homeLast20, awayLast20, playerRatings, playerStatsMap, preMatchOdds, allBookmakerOdds, oddsOverUnder, oddsBTTS, xgHome, xgAway };
     memCache.set(fixtureId, { data, ts: Date.now(), ttl });
     writeCache(`analysis_${fixtureId}`, data, ttl);
     return NextResponse.json({ success: true, ...data, _debug: debugInfo });

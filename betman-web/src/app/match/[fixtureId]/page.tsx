@@ -495,7 +495,7 @@ export default function MatchPage() {
               {tab === 'Stats'      && <StatsTab       statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} />}
               {tab === 'Form'       && <FormTab        homeLast20={analysis.homeLast20 ?? []} awayLast20={analysis.awayLast20 ?? []} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
               {tab === 'Standings'  && <StandingsTab   leagueId={analysis.leagueId ?? null} season={analysis.season ?? null} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
-              {tab === 'Odds'       && <OddsTab        allBookmakerOdds={analysis.allBookmakerOdds ?? []} game={fullGame} />}
+              {tab === 'Odds'       && <OddsTab        allBookmakerOdds={analysis.allBookmakerOdds ?? []} oddsOverUnder={analysis.oddsOverUnder ?? []} oddsBTTS={analysis.oddsBTTS ?? []} prediction={analysis.prediction} game={fullGame} />}
               {tab === 'Notes'      && <MemoTab        fixtureId={fixtureId} />}
               {tab === 'Chat'       && <ChatTab        fixtureId={fixtureId} />}
             </>

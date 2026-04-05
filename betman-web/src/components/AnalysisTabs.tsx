@@ -1241,83 +1241,230 @@ export function CommentaryTab({ events, game }: { events: any[]; game: any }) {
 }
 
 // ── 탭: 배당률 비교 (멀티 북메이커) ──────────────────────────────────────────
-export function OddsTab({ allBookmakerOdds, game }: { allBookmakerOdds: any[]; game: any }) {
-  if (!allBookmakerOdds || allBookmakerOdds.length === 0) {
-    return (
-      <div className="py-12 text-center text-slate-600 text-sm font-bold">
-        No odds data available
-      </div>
-    );
+export function OddsTab({ allBookmakerOdds, oddsOverUnder = [], oddsBTTS = [], game, prediction }: {
+  allBookmakerOdds: any[];
+  oddsOverUnder?: any[];
+  oddsBTTS?: any[];
+  game: any;
+  prediction?: any;
+}) {
+  const [market, setMarket] = useState<'1x2' | 'ou' | 'btts'>('1x2');
+
+  const hasAny = allBookmakerOdds.length > 0 || oddsOverUnder.length > 0 || oddsBTTS.length > 0;
+  if (!hasAny) {
+    return <div className="py-12 text-center text-slate-600 text-sm font-bold">No odds data available</div>;
   }
 
-  // 평균 배당 계산
-  const valids = allBookmakerOdds.filter(o => o.home && o.draw && o.away);
-  const avg = valids.length > 0 ? {
-    home: (valids.reduce((s, o) => s + parseFloat(o.home), 0) / valids.length).toFixed(2),
-    draw: (valids.reduce((s, o) => s + parseFloat(o.draw), 0) / valids.length).toFixed(2),
-    away: (valids.reduce((s, o) => s + parseFloat(o.away), 0) / valids.length).toFixed(2),
-  } : null;
-
-  // 최고 배당
-  const best = {
-    home: valids.reduce((b, o) => parseFloat(o.home) > parseFloat(b?.home ?? '0') ? o : b, valids[0]),
-    draw: valids.reduce((b, o) => parseFloat(o.draw) > parseFloat(b?.draw ?? '0') ? o : b, valids[0]),
-    away: valids.reduce((b, o) => parseFloat(o.away) > parseFloat(b?.away ?? '0') ? o : b, valids[0]),
+  // ── 공통 헬퍼 ──
+  const avgOdd = (arr: any[], key: string) => {
+    const vs = arr.filter(o => o[key]).map(o => parseFloat(o[key]));
+    return vs.length ? (vs.reduce((s, v) => s + v, 0) / vs.length).toFixed(2) : null;
   };
+  const bestOddBm = (arr: any[], key: string) =>
+    arr.reduce((b: any, o: any) => (parseFloat(o[key] ?? '0') > parseFloat(b?.[key] ?? '0') ? o : b), arr[0]);
 
   const OddCell = ({ val, isBest }: { val: string | null; isBest?: boolean }) => (
-    <span className={`text-[12px] font-black tabular-nums ${isBest ? 'text-emerald-400' : 'text-slate-300'}`}>
-      {val ?? '–'}
-    </span>
+    <span className={`text-[12px] font-black tabular-nums ${isBest ? 'text-emerald-400' : 'text-slate-300'}`}>{val ?? '–'}</span>
   );
 
-  return (
-    <div className="space-y-4">
-      {/* 평균 + 베스트 요약 */}
-      {avg && (
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            { label: game.homeTeam, val: avg.home, color: 'text-indigo-400' },
-            { label: 'Draw', val: avg.draw, color: 'text-slate-400' },
-            { label: game.awayTeam, val: avg.away, color: 'text-orange-400' },
-          ].map(({ label, val, color }) => (
-            <div key={label} className="bg-black/30 rounded-2xl p-3 border border-white/5 text-center">
-              <div className={`text-xl font-black ${color}`}>{val}</div>
-              <div className="text-[8px] font-black text-slate-600 uppercase mt-1 truncate">Avg · {label}</div>
+  // ── Value Bet (1X2만 해당) ──
+  const valueBets: { label: string; value: number; color: string }[] = [];
+  if (market === '1x2' && prediction && allBookmakerOdds.length > 0) {
+    const valids = allBookmakerOdds.filter(o => o.home && o.draw && o.away);
+    if (valids.length > 0) {
+      const ah = parseFloat(avgOdd(valids, 'home') ?? '0');
+      const ad = parseFloat(avgOdd(valids, 'draw') ?? '0');
+      const aw = parseFloat(avgOdd(valids, 'away') ?? '0');
+      const ph = parseFloat(prediction.homeWin ?? '0') / 100;
+      const pd = parseFloat(prediction.draw ?? '0') / 100;
+      const pa = parseFloat(prediction.awayWin ?? '0') / 100;
+      [
+        { label: `${game.homeTeam} Win`, prob: ph, odd: ah, color: 'text-indigo-400' },
+        { label: 'Draw',                  prob: pd, odd: ad, color: 'text-slate-400' },
+        { label: `${game.awayTeam} Win`,  prob: pa, odd: aw, color: 'text-orange-400' },
+      ].forEach(({ label, prob, odd, color }) => {
+        if (odd > 0 && prob > 0) {
+          const edge = Math.round((prob - 1 / odd) * 100);
+          if (edge > 2) valueBets.push({ label, value: edge, color });
+        }
+      });
+    }
+  }
+
+  // ── 1X2 뷰 ──
+  const render1X2 = () => {
+    const valids = allBookmakerOdds.filter(o => o.home && o.draw && o.away);
+    if (valids.length === 0 && allBookmakerOdds.length === 0)
+      return <div className="py-8 text-center text-slate-600 text-sm font-bold">No Match Winner odds</div>;
+    const avgH = avgOdd(allBookmakerOdds, 'home');
+    const avgD = avgOdd(allBookmakerOdds, 'draw');
+    const avgA = avgOdd(allBookmakerOdds, 'away');
+    const bH = bestOddBm(allBookmakerOdds, 'home');
+    const bD = bestOddBm(allBookmakerOdds, 'draw');
+    const bA = bestOddBm(allBookmakerOdds, 'away');
+    return (
+      <div className="space-y-3">
+        {/* 평균 요약 */}
+        {avgH && (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: game.homeTeam, val: avgH, color: 'text-indigo-400', predPct: prediction?.homeWin },
+              { label: 'Draw',        val: avgD, color: 'text-slate-400',   predPct: prediction?.draw },
+              { label: game.awayTeam, val: avgA, color: 'text-orange-400',  predPct: prediction?.awayWin },
+            ].map(({ label, val, color, predPct }) => (
+              <div key={label} className="bg-black/30 rounded-2xl p-3 border border-white/5 text-center">
+                <div className={`text-xl font-black ${color}`}>{val}</div>
+                <div className="text-[8px] font-black text-slate-600 uppercase mt-0.5 truncate">Avg Odds</div>
+                {predPct && <div className="text-[9px] font-bold text-slate-500 mt-1">AI {predPct}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+        {/* 가치 배팅 */}
+        {valueBets.length > 0 && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl px-4 py-3">
+            <div className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-2">📈 Value Bets</div>
+            <div className="flex flex-wrap gap-2">
+              {valueBets.map(vb => (
+                <div key={vb.label} className="flex items-center gap-1.5 bg-emerald-500/10 rounded-lg px-2.5 py-1">
+                  <span className={`text-[10px] font-black ${vb.color}`}>{vb.label}</span>
+                  <span className="text-[10px] font-black text-emerald-400">+{vb.value}%</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-[8px] text-slate-600 mt-2">Edge = AI prediction − bookmaker implied probability</div>
+          </div>
+        )}
+        {/* 헤더 */}
+        <div className="flex items-center gap-2 px-3 py-1">
+          <span className="flex-1 text-[9px] font-black text-slate-600 uppercase">Bookmaker</span>
+          <span className="w-14 text-[9px] font-black text-indigo-400 uppercase text-center">Home</span>
+          <span className="w-14 text-[9px] font-black text-slate-500 uppercase text-center">Draw</span>
+          <span className="w-14 text-[9px] font-black text-orange-400 uppercase text-center">Away</span>
+        </div>
+        <div className="space-y-1">
+          {allBookmakerOdds.map((o, i) => (
+            <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
+              <span className="flex-1 text-[11px] font-bold text-slate-400 truncate">{o.bookmaker}</span>
+              <span className="w-14 text-center"><OddCell val={o.home} isBest={bH?.bookmaker === o.bookmaker} /></span>
+              <span className="w-14 text-center"><OddCell val={o.draw} isBest={bD?.bookmaker === o.bookmaker} /></span>
+              <span className="w-14 text-center"><OddCell val={o.away} isBest={bA?.bookmaker === o.bookmaker} /></span>
             </div>
           ))}
         </div>
-      )}
-
-      {/* 헤더 */}
-      <div className="flex items-center gap-2 px-3 py-1">
-        <span className="flex-1 text-[9px] font-black text-slate-600 uppercase">Bookmaker</span>
-        <span className="w-14 text-[9px] font-black text-indigo-400 uppercase text-center">Home</span>
-        <span className="w-14 text-[9px] font-black text-slate-500 uppercase text-center">Draw</span>
-        <span className="w-14 text-[9px] font-black text-orange-400 uppercase text-center">Away</span>
       </div>
+    );
+  };
 
-      {/* 북메이커 리스트 */}
-      <div className="space-y-1">
-        {allBookmakerOdds.map((o, i) => (
-          <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
-            <span className="flex-1 text-[11px] font-bold text-slate-400 truncate">{o.bookmaker}</span>
-            <span className="w-14 text-center">
-              <OddCell val={o.home} isBest={best.home?.bookmaker === o.bookmaker} />
-            </span>
-            <span className="w-14 text-center">
-              <OddCell val={o.draw} isBest={best.draw?.bookmaker === o.bookmaker} />
-            </span>
-            <span className="w-14 text-center">
-              <OddCell val={o.away} isBest={best.away?.bookmaker === o.bookmaker} />
-            </span>
+  // ── Over/Under 뷰 ──
+  const renderOU = () => {
+    if (oddsOverUnder.length === 0)
+      return <div className="py-8 text-center text-slate-600 text-sm font-bold">No Over/Under odds</div>;
+    const avgO = avgOdd(oddsOverUnder, 'over');
+    const avgU = avgOdd(oddsOverUnder, 'under');
+    const bO = bestOddBm(oddsOverUnder, 'over');
+    const bU = bestOddBm(oddsOverUnder, 'under');
+    return (
+      <div className="space-y-3">
+        {avgO && (
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Over 2.5', val: avgO, color: 'text-sky-400' },
+              { label: 'Under 2.5', val: avgU, color: 'text-purple-400' },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="bg-black/30 rounded-2xl p-3 border border-white/5 text-center">
+                <div className={`text-xl font-black ${color}`}>{val}</div>
+                <div className="text-[8px] font-black text-slate-600 uppercase mt-1">{label} · Avg</div>
+              </div>
+            ))}
           </div>
+        )}
+        <div className="flex items-center gap-2 px-3 py-1">
+          <span className="flex-1 text-[9px] font-black text-slate-600 uppercase">Bookmaker</span>
+          <span className="w-16 text-[9px] font-black text-sky-400 uppercase text-center">Over 2.5</span>
+          <span className="w-16 text-[9px] font-black text-purple-400 uppercase text-center">Under 2.5</span>
+        </div>
+        <div className="space-y-1">
+          {oddsOverUnder.map((o, i) => (
+            <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
+              <span className="flex-1 text-[11px] font-bold text-slate-400 truncate">{o.bookmaker}</span>
+              <span className="w-16 text-center"><OddCell val={o.over}  isBest={bO?.bookmaker === o.bookmaker} /></span>
+              <span className="w-16 text-center"><OddCell val={o.under} isBest={bU?.bookmaker === o.bookmaker} /></span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  // ── BTTS 뷰 ──
+  const renderBTTS = () => {
+    if (oddsBTTS.length === 0)
+      return <div className="py-8 text-center text-slate-600 text-sm font-bold">No BTTS odds</div>;
+    const avgY = avgOdd(oddsBTTS, 'yes');
+    const avgN = avgOdd(oddsBTTS, 'no');
+    const bY = bestOddBm(oddsBTTS, 'yes');
+    const bN = bestOddBm(oddsBTTS, 'no');
+    return (
+      <div className="space-y-3">
+        {avgY && (
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { label: 'Both Score — Yes', val: avgY, color: 'text-emerald-400' },
+              { label: 'Both Score — No',  val: avgN, color: 'text-red-400' },
+            ].map(({ label, val, color }) => (
+              <div key={label} className="bg-black/30 rounded-2xl p-3 border border-white/5 text-center">
+                <div className={`text-xl font-black ${color}`}>{val}</div>
+                <div className="text-[8px] font-black text-slate-600 uppercase mt-1">{label} · Avg</div>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="flex items-center gap-2 px-3 py-1">
+          <span className="flex-1 text-[9px] font-black text-slate-600 uppercase">Bookmaker</span>
+          <span className="w-16 text-[9px] font-black text-emerald-400 uppercase text-center">Yes</span>
+          <span className="w-16 text-[9px] font-black text-red-400 uppercase text-center">No</span>
+        </div>
+        <div className="space-y-1">
+          {oddsBTTS.map((o, i) => (
+            <div key={i} className="flex items-center gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5 hover:bg-white/[0.06] transition-colors">
+              <span className="flex-1 text-[11px] font-bold text-slate-400 truncate">{o.bookmaker}</span>
+              <span className="w-16 text-center"><OddCell val={o.yes} isBest={bY?.bookmaker === o.bookmaker} /></span>
+              <span className="w-16 text-center"><OddCell val={o.no}  isBest={bN?.bookmaker === o.bookmaker} /></span>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* 마켓 탭 */}
+      <div className="flex gap-1 bg-white/5 rounded-xl p-1">
+        {([
+          { key: '1x2',  label: '1X2',       sub: `${allBookmakerOdds.length} BMs` },
+          { key: 'ou',   label: 'Over/Under', sub: `${oddsOverUnder.length} BMs` },
+          { key: 'btts', label: 'BTTS',       sub: `${oddsBTTS.length} BMs` },
+        ] as const).map(({ key, label, sub }) => (
+          <button
+            key={key}
+            onClick={() => setMarket(key)}
+            className={`flex-1 py-2 rounded-lg text-[11px] font-black transition-all ${
+              market === key ? 'bg-indigo-500 text-white shadow' : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            {label}
+            <div className="text-[8px] font-bold opacity-60">{sub}</div>
+          </button>
         ))}
       </div>
 
-      <div className="text-[9px] text-slate-700 text-center font-bold">
-        🟢 Green = best available odd · {allBookmakerOdds.length} bookmakers
-      </div>
+      {market === '1x2'  && render1X2()}
+      {market === 'ou'   && renderOU()}
+      {market === 'btts' && renderBTTS()}
+
+      <div className="text-[9px] text-slate-700 text-center font-bold">🟢 Best available odd</div>
     </div>
   );
 }
