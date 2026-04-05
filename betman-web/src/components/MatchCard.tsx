@@ -179,33 +179,47 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
           const homeScoreColor = hWin ? 'text-red-500' : aWin ? (isTomatoMode ? 'text-slate-500' : 'text-slate-400') : (isTomatoMode ? 'text-white' : 'text-slate-800');
           const awayScoreColor = aWin ? 'text-red-500' : hWin ? (isTomatoMode ? 'text-slate-500' : 'text-slate-400') : (isTomatoMode ? 'text-white' : 'text-slate-800');
 
+          const homeLogo = game.homeTeamId ? `https://media.api-sports.io/football/teams/${game.homeTeamId}.png` : null;
+          const awayLogo = game.awayTeamId ? `https://media.api-sports.io/football/teams/${game.awayTeamId}.png` : null;
+
           return (
             <>
-              <span className={`flex-1 text-[13px] sm:text-[14px] font-black text-right truncate ${
-                isTomatoMode ? 'text-white' : 'text-slate-900'
-              }`}>
-                {game.homeTeam}
-              </span>
-              
-              <div className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border tabular-nums transition-all ${
-                isTomatoMode 
-                  ? (scoreFlash ? 'bg-red-500/20 border-red-500/40' : 'bg-black/30 border-white/5') 
-                  : (scoreFlash ? 'bg-red-50 border-red-200' : 'bg-zinc-100 border-zinc-200')
-              }`}>
-                <span className={`text-[13px] sm:text-[14px] font-black min-w-[10px] text-center ${homeScoreColor}`}>
-                  {hScore}
+              {/* 홈팀 */}
+              <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                <span className={`text-[13px] sm:text-[14px] font-black text-right truncate ${
+                  isTomatoMode ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {game.homeTeam}
                 </span>
-                <span className={`font-bold text-[10px] ${isTomatoMode ? 'text-slate-600' : 'text-slate-300'}`}>:</span>
-                <span className={`text-[13px] sm:text-[14px] font-black min-w-[10px] text-center ${awayScoreColor}`}>
-                  {aScore}
-                </span>
+                {homeLogo && (
+                  <img src={homeLogo} alt="" className="w-5 h-5 shrink-0 object-contain"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                )}
               </div>
 
-              <span className={`flex-1 text-[13px] sm:text-[14px] font-black text-left truncate ${
-                isTomatoMode ? 'text-white' : 'text-slate-900'
+              {/* 스코어 */}
+              <div className={`shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-lg border tabular-nums transition-all ${
+                isTomatoMode
+                  ? (scoreFlash ? 'bg-red-500/20 border-red-500/40' : 'bg-black/30 border-white/5')
+                  : (scoreFlash ? 'bg-red-50 border-red-200' : 'bg-zinc-100 border-zinc-200')
               }`}>
-                {game.awayTeam}
-              </span>
+                <span className={`text-[13px] sm:text-[14px] font-black min-w-[10px] text-center ${homeScoreColor}`}>{hScore}</span>
+                <span className={`font-bold text-[10px] ${isTomatoMode ? 'text-slate-600' : 'text-slate-300'}`}>:</span>
+                <span className={`text-[13px] sm:text-[14px] font-black min-w-[10px] text-center ${awayScoreColor}`}>{aScore}</span>
+              </div>
+
+              {/* 원정팀 */}
+              <div className="flex-1 flex items-center gap-1.5 min-w-0">
+                {awayLogo && (
+                  <img src={awayLogo} alt="" className="w-5 h-5 shrink-0 object-contain"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                )}
+                <span className={`text-[13px] sm:text-[14px] font-black text-left truncate ${
+                  isTomatoMode ? 'text-white' : 'text-slate-900'
+                }`}>
+                  {game.awayTeam}
+                </span>
+              </div>
             </>
           );
         })()}

@@ -24,6 +24,11 @@ export default function MatchPage() {
   const captureRef = useRef<HTMLDivElement>(null);
 
   // 쿼리파람에서 기본 게임 정보 복원 (정적 필드)
+  const homeTeamId = searchParams.get('homeTeamId');
+  const awayTeamId = searchParams.get('awayTeamId');
+  const homeLogo = homeTeamId ? `https://media.api-sports.io/football/teams/${homeTeamId}.png` : null;
+  const awayLogo = awayTeamId ? `https://media.api-sports.io/football/teams/${awayTeamId}.png` : null;
+
   const game = {
     id: `fixture_${fixtureId}`,
     homeTeam:  searchParams.get('home')    ?? '',
@@ -211,12 +216,19 @@ export default function MatchPage() {
               <div className="flex items-center justify-between gap-3 mb-3">
                 {/* 홈 */}
                 <div className="flex-1 text-right min-w-0">
-                  <div className={`text-lg sm:text-xl font-black leading-tight truncate ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'}`}>
-                    {game.homeTeam}
-                    {homeReds > 0 && <span className="ml-1">{Array.from({length: homeReds}).map((_, i) => <span key={i}>🟥</span>)}</span>}
+                  <div className="flex items-center justify-end gap-2 min-w-0">
+                    <div className="min-w-0">
+                      <div className={`text-lg sm:text-xl font-black leading-tight truncate ${hWin ? 'text-white' : aWin ? 'text-slate-500' : 'text-white'}`}>
+                        {game.homeTeam}
+                        {homeReds > 0 && <span className="ml-1">{Array.from({length: homeReds}).map((_, i) => <span key={i}>🟥</span>)}</span>}
+                      </div>
+                      {homeFormation && <div className="text-[10px] font-black text-indigo-400 mt-0.5 text-right">{homeFormation}</div>}
+                      <div className="text-[10px] font-black text-slate-600 mt-0.5">Home</div>
+                    </div>
+                    {homeLogo && (
+                      <img src={homeLogo} alt="" className="w-10 h-10 shrink-0 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    )}
                   </div>
-                  {homeFormation && <div className="text-[10px] font-black text-indigo-400 mt-0.5">{homeFormation}</div>}
-                  <div className="text-[10px] font-black text-slate-600 mt-0.5">Home</div>
                 </div>
 
                 {/* 스코어 */}
@@ -237,12 +249,19 @@ export default function MatchPage() {
 
                 {/* 원정 */}
                 <div className="flex-1 min-w-0">
-                  <div className={`text-lg sm:text-xl font-black leading-tight truncate ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'}`}>
-                    {awayReds > 0 && <span className="mr-1">{Array.from({length: awayReds}).map((_, i) => <span key={i}>🟥</span>)}</span>}
-                    {game.awayTeam}
+                  <div className="flex items-center gap-2 min-w-0">
+                    {awayLogo && (
+                      <img src={awayLogo} alt="" className="w-10 h-10 shrink-0 object-contain" onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                    )}
+                    <div className="min-w-0">
+                      <div className={`text-lg sm:text-xl font-black leading-tight truncate ${aWin ? 'text-white' : hWin ? 'text-slate-500' : 'text-white'}`}>
+                        {awayReds > 0 && <span className="mr-1">{Array.from({length: awayReds}).map((_, i) => <span key={i}>🟥</span>)}</span>}
+                        {game.awayTeam}
+                      </div>
+                      {awayFormation && <div className="text-[10px] font-black text-orange-400 mt-0.5">{awayFormation}</div>}
+                      <div className="text-[10px] font-black text-slate-600 mt-0.5">Away</div>
+                    </div>
                   </div>
-                  {awayFormation && <div className="text-[10px] font-black text-orange-400 mt-0.5">{awayFormation}</div>}
-                  <div className="text-[10px] font-black text-slate-600 mt-0.5">Away</div>
                 </div>
               </div>
             );
