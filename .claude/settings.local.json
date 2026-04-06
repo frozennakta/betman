@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "WebFetch(domain:www.zenodds.com)"
+      "WebFetch(domain:www.zenodds.com)",
+      "Bash(npm run:*)"
     ]
   }
 }

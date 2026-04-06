@@ -6,6 +6,11 @@ import { useState, useEffect, Suspense } from 'react';
 import { Search, X } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
+const NAV_TABS = [
+  { href: '/',         label: '라이브스코어' },
+  { href: '/analysis', label: '분석' },
+];
+
 const SPORTS = [
   { icon: '⚽', label: 'Football', active: true },
   { icon: '🏀', label: 'Basketball', active: false },
@@ -60,14 +65,14 @@ function NavSearch() {
   };
 
   return (
-    <div className="flex-1 relative max-w-xl">
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+    <div className="flex-1 relative max-w-xs">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
       <input
         type="text"
-        placeholder="Search teams, leagues, countries..."
+        placeholder="팀, 리그, 국가 검색..."
         value={val}
         onChange={e => update(e.target.value)}
-        className="w-full h-9 bg-white/[0.06] border border-white/[0.08] text-white text-[13px] font-medium pl-9 pr-8 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:bg-white/[0.08] transition-all placeholder:text-slate-600"
+        className="w-full h-9 bg-black/[0.04] border border-black/[0.07] text-slate-800 text-[13px] font-medium pl-9 pr-8 rounded-xl focus:outline-none focus:border-indigo-400/60 focus:bg-black/[0.06] transition-all placeholder:text-slate-400"
       />
       {val && (
         <button
@@ -81,13 +86,34 @@ function NavSearch() {
   );
 }
 
+function NavTabs() {
+  const pathname = usePathname();
+  return (
+    <div className="flex items-center gap-1 shrink-0">
+      {NAV_TABS.map(tab => (
+        <Link
+          key={tab.href}
+          href={tab.href}
+          className={`px-3.5 py-1.5 rounded-xl text-[12px] font-black transition-all border ${
+            pathname === tab.href
+              ? 'bg-indigo-500/15 border-indigo-500/30 text-indigo-500'
+              : 'bg-transparent border-transparent text-slate-400 hover:text-slate-600 hover:bg-black/5'
+          }`}
+        >
+          {tab.label}
+        </Link>
+      ))}
+    </div>
+  );
+}
+
 export default function Navbar() {
   const { isTomatoMode, toggleMode } = useTheme();
 
   return (
-    <nav className="sticky top-0 z-[100] w-full bg-[var(--bg-base)]/95 backdrop-blur-2xl border-b border-white/[0.06]">
+    <nav className="sticky top-0 z-[100] w-full bg-[var(--bg-base)]/95 backdrop-blur-2xl border-b border-black/[0.06]">
 
-      {/* ── Row 1: 로고 + 검색 + 토글 ── */}
+      {/* ── Row 1: 로고 + 검색 + 탭 + 토마토 ── */}
       <div className="px-4 sm:px-6">
         <div className="flex items-center gap-3" style={{ height: 52 }}>
 
@@ -97,24 +123,29 @@ export default function Navbar() {
               <TomatoIcon className="w-full h-full drop-shadow-[0_0_12px_rgba(255,0,0,0.3)]" />
             </div>
             <span className="text-[18px] font-black tracking-[-0.04em] uppercase italic leading-none">
-              <span className="text-white">Tomato</span><span className="text-red-500">Score</span>
+              <span className="text-slate-800">Tomato</span><span className="text-red-500">Score</span>
             </span>
           </Link>
 
           {/* 검색창 — Suspense로 감싸야 useSearchParams 작동 */}
           <Suspense fallback={
-            <div className="flex-1 max-w-xl h-9 rounded-xl bg-white/[0.06] border border-white/[0.08]" />
+            <div className="flex-1 max-w-xs h-9 rounded-xl bg-black/[0.04] border border-black/[0.06]" />
           }>
             <NavSearch />
           </Suspense>
 
-          {/* Tomato / Zen 토글 */}
+          {/* 라이브스코어 / 분석 탭 */}
+          <Suspense fallback={null}>
+            <NavTabs />
+          </Suspense>
+
+          {/* Tomato / Zen 토글 — 젤 오른쪽 */}
           <button
             onClick={toggleMode}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-black transition-all border shrink-0 ${
               isTomatoMode
-                ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+                ? 'bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.15)]'
+                : 'bg-black/5 border-black/10 text-slate-400 hover:text-slate-700'
             }`}
           >
             <span className="text-sm">{isTomatoMode ? '🍅' : '🧘'}</span>
@@ -124,7 +155,7 @@ export default function Navbar() {
       </div>
 
       {/* ── Row 2: 스포츠 카테고리 ── */}
-      <div className="border-t border-white/[0.04]">
+      <div className="border-t border-black/[0.05]">
         <div className="px-4 sm:px-6 overflow-x-auto no-scrollbar">
           <div className="flex items-stretch h-9">
             {SPORTS.map((sport) => (
@@ -134,8 +165,8 @@ export default function Navbar() {
                 title={sport.active ? sport.label : `${sport.label} — Coming Soon`}
                 className={`flex items-center gap-1.5 px-4 h-full shrink-0 border-b-2 text-[12px] whitespace-nowrap transition-colors ${
                   sport.active
-                    ? 'border-indigo-500 text-white font-black'
-                    : 'border-transparent text-[#55556a] cursor-default'
+                    ? 'border-indigo-500 text-slate-800 font-black'
+                    : 'border-transparent text-slate-300 cursor-default'
                 }`}
               >
                 <span className="text-sm leading-none">{sport.icon}</span>

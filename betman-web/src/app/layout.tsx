@@ -27,16 +27,16 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased light`}
     >
       <head>
         {/* Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-        
-        {/* 라이트모드 깜빡임 방지 */}
-        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('betman-theme')==='light')document.documentElement.classList.add('light')}catch(e){}` }} />
+
+        {/* 다크모드 저장값 복원 (기본값: 라이트) */}
+        <script dangerouslySetInnerHTML={{ __html: `try{if(localStorage.getItem('betman-theme')==='dark')document.documentElement.classList.remove('light')}catch(e){}` }} />
       </head>
       <body className="min-h-screen bg-[var(--bg-base)] text-slate-100">
         <ThemeProvider>

@@ -171,13 +171,13 @@ function HomeContent() {
 
       {/* ── Left Sidebar ────────────────────────────────────────────── */}
       <aside
-        className="fixed left-0 z-30 flex flex-col bg-[var(--bg-card)] border-r border-white/[0.06] overflow-y-auto no-scrollbar transition-all duration-300"
+        className="fixed left-0 z-30 flex flex-col bg-[var(--bg-card)] border-r border-black/[0.06] overflow-y-auto no-scrollbar transition-all duration-300 shadow-sm"
         style={{ top: 96, width: SIDEBAR_W, height: 'calc(100vh - 96px)' }}
       >
         {/* 접기 버튼 */}
         <button
           onClick={() => setSidebarOpen(v => !v)}
-          className="flex items-center justify-end p-3 text-slate-600 hover:text-slate-400 transition-colors shrink-0"
+          className="flex items-center justify-end p-3 text-slate-400 hover:text-slate-600 transition-colors shrink-0"
         >
           <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${sidebarOpen ? 'rotate-180' : ''}`} />
         </button>
@@ -185,13 +185,13 @@ function HomeContent() {
         {/* Top Leagues */}
         <div className="px-2 space-y-0.5 pb-4">
           {sidebarOpen && (
-            <div className="px-2 pb-1 text-[9px] font-black text-slate-600 uppercase tracking-widest">Top Leagues</div>
+            <div className="px-2 pb-1 text-[9px] font-black text-slate-400 uppercase tracking-widest">Top Leagues</div>
           )}
           <button
             onClick={() => setLeagueFilter('')}
             title="All Leagues"
             className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-xl text-left transition-all ${
-              !leagueFilter ? 'bg-indigo-500/15 text-indigo-300' : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]'
+              !leagueFilter ? 'bg-indigo-50 text-indigo-600' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
             }`}
           >
             <span className="text-lg shrink-0">🌍</span>
@@ -204,8 +204,8 @@ function HomeContent() {
               title={lg}
               className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-xl text-left transition-all ${
                 leagueFilter === lg
-                  ? 'bg-indigo-500/15 text-indigo-300'
-                  : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.04]'
+                  ? 'bg-indigo-50 text-indigo-600'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
               }`}
             >
               <span className="text-base shrink-0">🏆</span>
@@ -219,11 +219,11 @@ function HomeContent() {
       <div className="flex-1 min-w-0 transition-all duration-300" style={{ marginLeft: SIDEBAR_W }}>
 
         {/* ── 상단 고정 바 ─────────────────────────────────────────── */}
-        <div className="sticky top-16 z-20 bg-[var(--bg-base)]/95 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="sticky top-[88px] z-20 bg-[var(--bg-base)]/95 backdrop-blur-xl border-b border-black/[0.05]">
 
           {/* 날짜 스트립 */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.04]">
-            <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-black/[0.04]">
+            <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
             <div className="flex gap-1 overflow-x-auto no-scrollbar flex-1">
               {dateStrip.map(d => (
                 <button
@@ -232,23 +232,23 @@ function HomeContent() {
                   className={`flex flex-col items-center px-3 py-1.5 rounded-xl shrink-0 transition-all ${
                     dateOffset === d.offset
                       ? 'bg-indigo-500 text-white'
-                      : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-100'
                   }`}
                 >
                   <span className="text-[9px] font-black tracking-wider">
                     {d.offset === 0 ? 'TODAY' : d.dayName}
                   </span>
                   <span className="text-[11px] font-bold tabular-nums">{d.date}</span>
-                  <span className={`text-[8px] font-bold tabular-nums ${dateOffset === d.offset ? 'text-indigo-200' : 'text-slate-700'}`}>
+                  <span className={`text-[8px] font-bold tabular-nums ${dateOffset === d.offset ? 'text-indigo-200' : 'text-slate-300'}`}>
                     {countForOffset(d.offset) || ''}
                   </span>
                 </button>
               ))}
             </div>
             {/* 갱신 카운트 */}
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600 shrink-0">
-              <span className={`w-1.5 h-1.5 rounded-full ${countdown <= 5 ? 'bg-orange-400 animate-ping' : 'bg-slate-700'}`} />
-              <span className={countdown <= 5 ? 'text-orange-400' : ''}>{countdown}s</span>
+            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-400 shrink-0">
+              <span className={`w-1.5 h-1.5 rounded-full ${countdown <= 5 ? 'bg-orange-400 animate-ping' : 'bg-slate-300'}`} />
+              <span className={countdown <= 5 ? 'text-orange-500' : ''}>{countdown}s</span>
             </div>
           </div>
 
@@ -266,18 +266,18 @@ function HomeContent() {
                 className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-[11px] font-black transition-all border ${
                   statusFilter === tab.key
                     ? tab.key === 'live'
-                      ? 'bg-red-500/15 border-red-500/30 text-red-400'
-                      : 'bg-indigo-500/15 border-indigo-500/30 text-indigo-300'
-                    : 'bg-transparent border-white/5 text-slate-500 hover:text-slate-300 hover:border-white/10'
+                      ? 'bg-red-50 border-red-200 text-red-500'
+                      : 'bg-indigo-50 border-indigo-200 text-indigo-600'
+                    : 'bg-transparent border-slate-100 text-slate-400 hover:text-slate-600 hover:border-slate-200'
                 }`}
               >
                 {tab.key === 'live' && (
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${liveCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-slate-700'}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${liveCount > 0 ? 'bg-red-500 animate-pulse' : 'bg-slate-300'}`} />
                 )}
                 {tab.label}
                 {tab.count !== null && tab.count > 0 && (
                   <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-black ${
-                    tab.key === 'live' ? 'bg-red-500/20 text-red-400' : 'bg-white/10 text-slate-400'
+                    tab.key === 'live' ? 'bg-red-100 text-red-500' : 'bg-slate-100 text-slate-500'
                   }`}>
                     {tab.count}
                   </span>
@@ -285,7 +285,7 @@ function HomeContent() {
               </button>
             ))}
 
-            <div className="ml-auto text-[10px] font-bold text-slate-600 hidden sm:block">
+            <div className="ml-auto text-[10px] font-bold text-slate-400 hidden sm:block">
               Updated <span className="text-slate-500">{lastUpdated || '--:--:--'}</span>
             </div>
           </div>
@@ -295,21 +295,21 @@ function HomeContent() {
         <div className="p-4">
           {loading && games.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-40">
-              <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin opacity-50 mb-4" />
-              <p className="text-slate-600 font-black text-sm">FETCHING DATA...</p>
+              <RefreshCw className="w-8 h-8 text-indigo-400 animate-spin opacity-50 mb-4" />
+              <p className="text-slate-400 font-black text-sm">FETCHING DATA...</p>
             </div>
           ) : (
             <div className="space-y-3">
 
               {/* 즐겨찾기 (All 탭에서만) */}
               {statusFilter === 'all' && favoriteGames.length > 0 && (
-                <div className="bg-[var(--bg-card)] rounded-2xl border border-amber-500/20 overflow-hidden">
-                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/[0.04]">
-                    <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
-                    <span className="text-[12px] font-black text-white">Favorites</span>
-                    <span className="ml-auto text-[10px] text-slate-600">{favoriteGames.length} matches</span>
+                <div className="bg-[var(--bg-card)] rounded-2xl border border-amber-200 overflow-hidden shadow-sm">
+                  <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-100">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
+                    <span className="text-[12px] font-black text-slate-700">Favorites</span>
+                    <span className="ml-auto text-[10px] text-slate-400">{favoriteGames.length} matches</span>
                   </div>
-                  <div className="divide-y divide-white/[0.03]">
+                  <div className="divide-y divide-slate-50">
                     {favoriteGames.map(g => (
                       <MatchCard key={g.id} game={g} isFavorite={isFav(g.id)} onToggleFav={toggleFav} compact />
                     ))}
@@ -319,14 +319,14 @@ function HomeContent() {
 
               {/* 리그 그룹 */}
               {leagueGroups.length === 0 ? (
-                <div className="py-20 text-center text-slate-600 font-bold text-sm">No matches found</div>
+                <div className="py-20 text-center text-slate-400 font-bold text-sm">No matches found</div>
               ) : (
                 leagueGroups.map(group => {
                   const iso2 = getIso2(group.country);
                   return (
-                    <div key={group.league} className="bg-[var(--bg-card)] rounded-2xl border border-white/[0.06] overflow-hidden">
+                    <div key={group.league} className="bg-[var(--bg-card)] rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
                       {/* 리그 헤더 */}
-                      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-white/[0.04]">
+                      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-slate-50">
                         {group.leagueId ? (
                           <img
                             src={`https://media.api-sports.io/football/leagues/${group.leagueId}.png`}
@@ -337,7 +337,7 @@ function HomeContent() {
                         ) : (
                           <span className="text-base shrink-0">🏆</span>
                         )}
-                        <span className="text-[12px] font-black text-white truncate">{group.league}</span>
+                        <span className="text-[12px] font-black text-slate-700 truncate">{group.league}</span>
                         {iso2 && (
                           <img
                             src={`https://flagcdn.com/w20/${iso2.toLowerCase()}.png`}
@@ -346,10 +346,10 @@ function HomeContent() {
                             onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                           />
                         )}
-                        <span className="text-[10px] text-slate-600 ml-auto shrink-0">{group.games.length}</span>
+                        <span className="text-[10px] text-slate-400 ml-auto shrink-0">{group.games.length}</span>
                       </div>
                       {/* 경기 목록 */}
-                      <div className="divide-y divide-white/[0.03]">
+                      <div className="divide-y divide-slate-50">
                         {group.games.map(g => (
                           <MatchCard
                             key={g.id}
@@ -380,7 +380,7 @@ function HomeContent() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.8 }}
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="p-3 bg-[var(--bg-card)] hover:bg-white/10 border border-white/10 rounded-2xl shadow-xl text-white transition-colors"
+              className="p-3 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl shadow-lg text-slate-600 transition-colors"
             >
               <ChevronUp className="w-5 h-5" />
             </motion.button>
