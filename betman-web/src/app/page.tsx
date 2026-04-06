@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
-import { RefreshCw, Search, Calendar, ChevronUp, ChevronRight, X, Star } from 'lucide-react';
+import { RefreshCw, Calendar, ChevronUp, ChevronRight, Star } from 'lucide-react';
 import MatchCard, { useFavorites } from '@/components/MatchCard';
 import OddsCalculator from '@/components/OddsCalculator';
 import { getIso2 } from '@/components/AnalysisTabs';
@@ -39,18 +40,19 @@ function getDateStrip() {
   return days;
 }
 
-export default function HomePage() {
+function HomeContent() {
+  const searchParams = useSearchParams();
+  const searchTerm = searchParams.get('q') ?? '';
+
   const [games, setGames] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
   const [leagueFilter, setLeagueFilter] = useState('');
   const [dateOffset, setDateOffset] = useState(0);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [countdown, setCountdown] = useState(20);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const searchRef = useRef<HTMLInputElement>(null);
   const { favorites, toggle: toggleFav, isFav } = useFavorites();
 
   const fetchGames = useCallback(async () => {
@@ -219,14 +221,14 @@ export default function HomePage() {
         {/* ── 상단 고정 바 ─────────────────────────────────────────── */}
         <div className="sticky top-16 z-20 bg-[var(--bg-base)]/95 backdrop-blur-xl border-b border-white/[0.06]">
 
-          {/* 날짜 스트립 + 검색 */}
+          {/* 날짜 스트립 */}
           <div className="flex items-center gap-2 px-4 py-2 border-b border-white/[0.04]">
             <Calendar className="w-4 h-4 text-slate-600 shrink-0" />
             <div className="flex gap-1 overflow-x-auto no-scrollbar flex-1">
               {dateStrip.map(d => (
                 <button
                   key={d.offset}
-                  onClick={() => { setDateOffset(d.offset); }}
+                  onClick={() => setDateOffset(d.offset)}
                   className={`flex flex-col items-center px-3 py-1.5 rounded-xl shrink-0 transition-all ${
                     dateOffset === d.offset
                       ? 'bg-indigo-500 text-white'
@@ -243,27 +245,8 @@ export default function HomePage() {
                 </button>
               ))}
             </div>
-
-            {/* 검색 */}
-            <div className="relative shrink-0 w-44">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-500" />
-              <input
-                ref={searchRef}
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                className="w-full bg-white/5 border border-white/5 text-white text-[11px] font-medium pl-7 pr-6 py-1.5 rounded-xl focus:outline-none focus:border-indigo-500/50 placeholder:text-slate-600"
-              />
-              {searchTerm && (
-                <button onClick={() => setSearchTerm('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white">
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
             {/* 갱신 카운트 */}
-            <div className="hidden lg:flex items-center gap-1 text-[10px] font-bold text-slate-600 shrink-0">
+            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-600 shrink-0">
               <span className={`w-1.5 h-1.5 rounded-full ${countdown <= 5 ? 'bg-orange-400 animate-ping' : 'bg-slate-700'}`} />
               <span className={countdown <= 5 ? 'text-orange-400' : ''}>{countdown}s</span>
             </div>
@@ -405,5 +388,14 @@ export default function HomePage() {
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+
+export default function HomePage() {
+  return (
+    <Suspense>
+      <HomeContent />
+    </Suspense>
   );
 }

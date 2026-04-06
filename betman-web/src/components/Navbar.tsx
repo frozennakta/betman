@@ -1,6 +1,9 @@
 "use client";
 
 import Link from 'next/link';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { Search, X } from 'lucide-react';
 import { useTheme } from '@/context/ThemeContext';
 
 const SPORTS = [
@@ -35,65 +38,107 @@ function TomatoIcon({ className = '' }: { className?: string }) {
   );
 }
 
+// useSearchParams를 쓰는 부분만 별도 컴포넌트로 분리 → Suspense로 감싸야 함
+function NavSearch() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [val, setVal] = useState(searchParams.get('q') ?? '');
+
+  useEffect(() => {
+    setVal(searchParams.get('q') ?? '');
+  }, [searchParams]);
+
+  const update = (v: string) => {
+    setVal(v);
+    const qs = v ? `?q=${encodeURIComponent(v)}` : '';
+    if (pathname === '/') {
+      router.replace(`/${qs}`, { scroll: false });
+    } else {
+      router.push(`/${qs}`);
+    }
+  };
+
+  return (
+    <div className="flex-1 relative max-w-xl">
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+      <input
+        type="text"
+        placeholder="Search teams, leagues, countries..."
+        value={val}
+        onChange={e => update(e.target.value)}
+        className="w-full h-9 bg-white/[0.06] border border-white/[0.08] text-white text-[13px] font-medium pl-9 pr-8 rounded-xl focus:outline-none focus:border-indigo-500/50 focus:bg-white/[0.08] transition-all placeholder:text-slate-600"
+      />
+      {val && (
+        <button
+          onClick={() => update('')}
+          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function Navbar() {
   const { isTomatoMode, toggleMode } = useTheme();
 
   return (
     <nav className="sticky top-0 z-[100] w-full bg-[var(--bg-base)]/95 backdrop-blur-2xl border-b border-white/[0.06]">
 
-      {/* ── Row 1: 로고 + 토글 ── */}
-      <div className="max-w-full px-4 sm:px-6">
-        <div className="flex h-14 items-center justify-between">
+      {/* ── Row 1: 로고 + 검색 + 토글 ── */}
+      <div className="px-4 sm:px-6">
+        <div className="flex items-center gap-3" style={{ height: 52 }}>
 
           {/* 로고 */}
-          <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-            <div className="w-9 h-9 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6">
-              <TomatoIcon className="w-full h-full drop-shadow-[0_0_15px_rgba(255,0,0,0.3)]" />
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <div className="w-8 h-8 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6">
+              <TomatoIcon className="w-full h-full drop-shadow-[0_0_12px_rgba(255,0,0,0.3)]" />
             </div>
-            <div className="flex flex-col leading-none border-l border-white/10 pl-2.5">
-              <span className="text-[22px] font-black tracking-[-0.05em] uppercase italic">
-                <span className="text-white">tomato</span>
-                <span className="text-red-500 ml-1">score</span>
-              </span>
-              <span className="text-[9px] font-black tracking-[0.3em] uppercase text-[#55556a] hidden sm:block">
-                Global Sports Engine
-              </span>
-            </div>
+            <span className="text-[18px] font-black tracking-[-0.04em] uppercase italic leading-none">
+              <span className="text-white">Tomato</span><span className="text-red-500">Score</span>
+            </span>
           </Link>
 
-          {/* Tomato / Zen 스위치 */}
-          <div className="relative group">
-            <button
-              onClick={toggleMode}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black transition-all border ${
-                isTomatoMode
-                  ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:grayscale-0'
-              }`}
-            >
-              <span className="text-sm">{isTomatoMode ? '🍅' : '🧘'}</span>
-              <span className="hidden sm:inline">{isTomatoMode ? 'Tomato' : 'Zen'}</span>
-            </button>
-          </div>
+          {/* 검색창 — Suspense로 감싸야 useSearchParams 작동 */}
+          <Suspense fallback={
+            <div className="flex-1 max-w-xl h-9 rounded-xl bg-white/[0.06] border border-white/[0.08]" />
+          }>
+            <NavSearch />
+          </Suspense>
+
+          {/* Tomato / Zen 토글 */}
+          <button
+            onClick={toggleMode}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[12px] font-black transition-all border shrink-0 ${
+              isTomatoMode
+                ? 'bg-red-500/10 border-red-500/30 text-red-400 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white'
+            }`}
+          >
+            <span className="text-sm">{isTomatoMode ? '🍅' : '🧘'}</span>
+            <span className="hidden sm:inline">{isTomatoMode ? 'Tomato' : 'Zen'}</span>
+          </button>
         </div>
       </div>
 
-      {/* ── Row 2: 스포츠 카테고리 (Polymarket 스타일) ── */}
+      {/* ── Row 2: 스포츠 카테고리 ── */}
       <div className="border-t border-white/[0.04]">
-        <div className="max-w-full px-4 sm:px-6 overflow-x-auto no-scrollbar">
-          <div className="flex items-stretch h-10 gap-0">
+        <div className="px-4 sm:px-6 overflow-x-auto no-scrollbar">
+          <div className="flex items-stretch h-9">
             {SPORTS.map((sport) => (
               <button
                 key={sport.label}
                 disabled={!sport.active}
                 title={sport.active ? sport.label : `${sport.label} — Coming Soon`}
-                className={`flex items-center gap-1.5 px-4 h-full shrink-0 border-b-2 text-[13px] whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-1.5 px-4 h-full shrink-0 border-b-2 text-[12px] whitespace-nowrap transition-colors ${
                   sport.active
                     ? 'border-indigo-500 text-white font-black'
                     : 'border-transparent text-[#55556a] cursor-default'
                 }`}
               >
-                <span className="text-base leading-none">{sport.icon}</span>
+                <span className="text-sm leading-none">{sport.icon}</span>
                 <span>{sport.label}</span>
               </button>
             ))}
