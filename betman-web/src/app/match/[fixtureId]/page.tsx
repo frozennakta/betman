@@ -492,7 +492,7 @@ export default function MatchPage() {
               {tab === 'Predict'    && <PoissonTab     analysis={analysis} game={fullGame} />}
               {tab === 'Lineup'     && <LineupTab      lineups={analysis.lineups ?? []} playerRatings={analysis.playerRatings} playerStatsMap={analysis.playerStatsMap ?? {}} onPlayerClick={(p: any) => setSelectedPlayer(p)} />}
               {tab === 'Absences'   && <InjuriesTab    injuries={analysis.injuries ?? []} game={fullGame} />}
-              {tab === 'Stats'      && <StatsTab       statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} />}
+              {tab === 'Stats'      && <StatsTab       statistics={analysis.statistics ?? []} xgHome={analysis.xgHome} xgAway={analysis.xgAway} events={analysis.events ?? []} game={fullGame} elapsed={live.elapsed} />}
               {tab === 'Form'       && <FormTab        homeLast20={analysis.homeLast20 ?? []} awayLast20={analysis.awayLast20 ?? []} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
               {tab === 'Standings'  && <StandingsTab   leagueId={analysis.leagueId ?? null} season={analysis.season ?? null} homeTeam={game.homeTeam} awayTeam={game.awayTeam} />}
               {tab === 'Odds'       && <OddsTab        allBookmakerOdds={analysis.allBookmakerOdds ?? []} oddsOverUnder={analysis.oddsOverUnder ?? []} oddsBTTS={analysis.oddsBTTS ?? []} prediction={analysis.prediction} game={fullGame} />}

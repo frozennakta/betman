@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { MapPin, User, Calendar, Trophy, Send, MessageSquare } from 'lucide-react';
 
 export const STATUS_LABEL: Record<string, string> = {
@@ -273,9 +273,27 @@ export function EventsTab({ events }: { events: any[] }) {
 }
 
 // ── 탭: 스탯 ──────────────────────────────────────────────────────────────────
-export function StatsTab({ statistics, xgHome, xgAway }: { statistics: any[]; xgHome?: string | null; xgAway?: string | null }) {
-  if (!statistics || statistics.length < 2) {
+export function StatsTab({ statistics, xgHome, xgAway, events = [], game, elapsed }: {
+  statistics: any[];
+  xgHome?: string | null;
+  xgAway?: string | null;
+  events?: any[];
+  game?: any;
+  elapsed?: number | null;
+}) {
+  const hasStats = statistics && statistics.length >= 2;
+  const hasEvents = events.length > 0;
+
+  if (!hasStats && !hasEvents) {
     return <div className="py-12 text-center text-slate-600 text-sm font-bold">No stats (pre-match or unsupported)</div>;
+  }
+
+  if (!hasStats) {
+    return (
+      <div className="space-y-4">
+        {game && hasEvents && <MomentumChart events={events} game={game} elapsed={elapsed} />}
+      </div>
+    );
   }
   const homeStats = statistics[0];
   const awayStats = statistics[1];
@@ -346,6 +364,11 @@ export function StatsTab({ statistics, xgHome, xgAway }: { statistics: any[]; xg
 
   return (
     <div className="space-y-4">
+      {/* 경기 흐름 차트 */}
+      {game && hasEvents && (
+        <MomentumChart events={events} game={game} elapsed={elapsed} />
+      )}
+
       {/* 모멘텀 바 */}
       {hasMomentum && (
         <div className="bg-gradient-to-r from-emerald-500/10 via-black to-orange-500/10 p-4 rounded-2xl border border-white/5 relative overflow-hidden">
@@ -801,17 +824,8 @@ function RecentGamesSection({ recent, teamName }: { recent: any[]; teamName: str
 
 // ── 탭: 분석 ──────────────────────────────────────────────────────────────────
 export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
-  const odds = analysis.preMatchOdds;
-  let homeOdd: string | null = null, drawOdd: string | null = null, awayOdd: string | null = null;
-  if (odds) {
-    homeOdd = odds.find((o: any) => o.value === 'Home')?.odd;
-    drawOdd = odds.find((o: any) => o.value === 'Draw')?.odd;
-    awayOdd = odds.find((o: any) => o.value === 'Away')?.odd;
-  }
-
   return (
     <div className="space-y-6">
-      {/* Value Bet 섹션 제거됨 */}
 
       {analysis.prediction && (
         <div className="grid grid-cols-3 gap-3 text-center">
@@ -887,7 +901,7 @@ export function AnalysisTab({ analysis, game }: { analysis: any; game: any }) {
 }
 
 // ── 탭: Trollbox 채팅방 ───────────────────────────────────────────────────────
-export function ChatTab({ fixtureId }: { fixtureId: string }) {
+export function ChatTab({ fixtureId: _fixtureId }: { fixtureId: string }) {
   const [messages, setMessages] = useState<{ id: string; user: string; text: string; time: string }[]>([]);
   const [input, setInput] = useState('');
   const [username, setUsername] = useState('Guest');
@@ -1069,7 +1083,7 @@ export function PoissonTab({ analysis, game }: { analysis: any; game: any }) {
 }
 
 // ── 탭: 부상/결장 ─────────────────────────────────────────────────────────────
-export function InjuriesTab({ injuries, game }: { injuries: any[]; game: any }) {
+export function InjuriesTab({ injuries }: { injuries: any[]; game?: any }) {
   if (!injuries || injuries.length === 0) {
     return (
       <div className="py-12 text-center text-slate-600 text-sm font-bold">
@@ -1545,6 +1559,203 @@ export function PlayerStatCard({ player, onClose }: { player: any; onClose: () =
         >
           Close
         </button>
+      </div>
+    </div>
+  );
+}
+
+// ── 경기 흐름 차트 (Match Flow / Momentum) ───────────────────────────────────
+export function MomentumChart({ events, game, elapsed }: {
+  events: any[];
+  game: any;
+  elapsed?: number | null;
+}) {
+  const [cursor, setCursor] = useState<number>(() => Math.min(elapsed ?? 90, 90));
+  useEffect(() => { if (elapsed != null) setCursor(Math.min(elapsed, 90)); }, [elapsed]);
+
+  const homeTeam = game.homeTeam ?? '';
+  const awayTeam = game.awayTeam ?? '';
+
+  // 결정론적 모멘텀 데이터 (이벤트 기반 스파이크 + 사인파 배경)
+  const pts = useMemo(() => {
+    const data: number[] = [];
+    for (let t = 0; t <= 90; t++) {
+      const base =
+        Math.sin(t * 0.23) * 18 +
+        Math.sin(t * 0.51) * 13 +
+        Math.sin(t * 1.17) * 8  +
+        Math.cos(t * 0.71) * 11 +
+        Math.cos(t * 1.43) * 6;
+      data.push(base);
+    }
+    for (const ev of events) {
+      const m = Math.min(Math.max(Math.round(ev.minute ?? 0), 0), 90);
+      const isHome = ev.team === homeTeam;
+      const dir = isHome ? 1 : -1;
+      const mag =
+        ev.type === 'Goal'  ? 58 :
+        ev.type === 'Card'  && ev.detail?.includes('Red') ? 32 :
+        ev.type === 'Card'  ? 16 :
+        ev.type === 'subst' ? 8  : 0;
+      if (!mag) continue;
+      for (let j = 0; j <= 90; j++) {
+        const d = j - m;
+        if (d < -6 || d > 25) continue;
+        const w = d < 0 ? Math.exp(d * 0.55) : Math.exp(-d * 0.13);
+        data[j] = Math.max(-88, Math.min(88, data[j] + dir * mag * w));
+      }
+    }
+    return data;
+  }, [events, homeTeam]);
+
+  // 스크러버 위치의 값
+  const cursorVal = pts[Math.round(Math.min(cursor, 90))] ?? 0;
+  const dominant = cursorVal > 3 ? homeTeam : cursorVal < -3 ? awayTeam : 'Even';
+
+  // SVG 좌표 계산
+  const W = 800, CY = 70, H = 140;
+  const xOf = (t: number) => (t / 90) * W;
+  const yOf = (v: number) => CY - (v / 100) * (CY - 8);
+
+  // polyline 포인트
+  const linePts = pts.map((v, t) => `${xOf(t).toFixed(1)},${yOf(v).toFixed(1)}`).join(' ');
+
+  // 홈 fill (center 위) — polygon with flat bottom
+  const homeArea = [
+    `${xOf(0)},${CY}`,
+    ...pts.map((v, t) => `${xOf(t).toFixed(1)},${yOf(Math.max(0, v)).toFixed(1)}`),
+    `${xOf(90)},${CY}`,
+  ].join(' ');
+  // 원정 fill (center 아래)
+  const awayArea = [
+    `${xOf(0)},${CY}`,
+    ...pts.map((v, t) => `${xOf(t).toFixed(1)},${yOf(Math.min(0, v)).toFixed(1)}`),
+    `${xOf(90)},${CY}`,
+  ].join(' ');
+
+  const ticks = [0, 15, 30, 45, 60, 75, 90];
+  const tickLabel = (t: number) => t === 45 ? 'HT' : t === 90 ? "90'" : `${t}'`;
+  const cursorX = xOf(cursor);
+  const cursorY = yOf(cursorVal);
+
+  const goalEvents   = events.filter(e => e.type === 'Goal');
+  const cardEvents   = events.filter(e => e.type === 'Card');
+
+  return (
+    <div className="bg-black/20 rounded-2xl border border-white/5 p-4 space-y-3">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Match Flow</span>
+        <div className="flex items-center gap-1.5 text-[10px] font-black">
+          <span className={`px-2 py-0.5 rounded-full border ${cursorVal > 3 ? 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30' : 'bg-white/5 text-slate-600 border-white/5'}`}>
+            {homeTeam.split(' ').slice(-1)[0]}
+          </span>
+          <span className="text-slate-600">vs</span>
+          <span className={`px-2 py-0.5 rounded-full border ${cursorVal < -3 ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' : 'bg-white/5 text-slate-600 border-white/5'}`}>
+            {awayTeam.split(' ').slice(-1)[0]}
+          </span>
+        </div>
+      </div>
+
+      {/* SVG 차트 */}
+      <svg viewBox={`0 0 ${W} ${H + 22}`} className="w-full" style={{ display: 'block' }}>
+        <defs>
+          <linearGradient id="mgHomeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="#6366f1" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#6366f1" stopOpacity="0.03" />
+          </linearGradient>
+          <linearGradient id="mgAwayGrad" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%"   stopColor="#f97316" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#f97316" stopOpacity="0.03" />
+          </linearGradient>
+          <clipPath id="mgHomeClip"><rect x="0" y="0" width={W} height={CY} /></clipPath>
+          <clipPath id="mgAwayClip"><rect x="0" y={CY} width={W} height={CY} /></clipPath>
+        </defs>
+
+        {/* 세로 그리드 */}
+        {ticks.map(t => (
+          <line key={t} x1={xOf(t)} y1={0} x2={xOf(t)} y2={H}
+            stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
+        ))}
+
+        {/* 가로 중심선 */}
+        <line x1={0} y1={CY} x2={W} y2={CY}
+          stroke="rgba(255,255,255,0.13)" strokeWidth="1" strokeDasharray="5 4" />
+
+        {/* 홈 그라데이션 fill */}
+        <polygon points={homeArea} fill="url(#mgHomeGrad)" clipPath="url(#mgHomeClip)" />
+        {/* 원정 그라데이션 fill */}
+        <polygon points={awayArea} fill="url(#mgAwayGrad)" clipPath="url(#mgAwayClip)" />
+
+        {/* 모멘텀 선 */}
+        <polyline points={linePts} fill="none"
+          stroke="#818cf8" strokeWidth="1.8"
+          strokeLinejoin="round" strokeLinecap="round" />
+
+        {/* 골 마커 */}
+        {goalEvents.map((ev, i) => {
+          const x = xOf(Math.min(ev.minute ?? 0, 90));
+          const isHome = ev.team === homeTeam;
+          return (
+            <g key={`g${i}`}>
+              <rect x={x - 5} y={isHome ? 4 : CY + 2} width={10}
+                height={isHome ? CY - 4 : CY - 2}
+                fill={isHome ? 'rgba(99,102,241,0.25)' : 'rgba(249,115,22,0.25)'} rx="2" />
+              <text x={x} y={isHome ? 4 : H - 2}
+                textAnchor="middle" fontSize="11" dominantBaseline={isHome ? 'auto' : 'hanging'}>
+                ⚽
+              </text>
+            </g>
+          );
+        })}
+
+        {/* 카드 마커 */}
+        {cardEvents.map((ev, i) => {
+          const x = xOf(Math.min(ev.minute ?? 0, 90));
+          const isRed = ev.detail?.includes('Red');
+          return (
+            <rect key={`c${i}`}
+              x={x - 4} y={CY - 5} width={8} height={10}
+              fill={isRed ? '#ef4444' : '#eab308'} rx="1.5" opacity="0.85" />
+          );
+        })}
+
+        {/* 커서 라인 */}
+        <line x1={cursorX} y1={0} x2={cursorX} y2={H}
+          stroke="#22c55e" strokeWidth="2" />
+        <circle cx={cursorX} cy={cursorY} r={5}
+          fill="#22c55e" stroke="#0f172a" strokeWidth="1.5" />
+
+        {/* X축 레이블 */}
+        {ticks.map(t => (
+          <text key={t} x={xOf(t)} y={H + 16}
+            textAnchor="middle" fontSize="11" fontWeight="700"
+            fill="rgba(148,163,184,0.55)">
+            {tickLabel(t)}
+          </text>
+        ))}
+
+        {/* 커서 시간 레이블 */}
+        <text
+          x={Math.max(20, Math.min(cursorX, W - 20))} y={H + 16}
+          textAnchor="middle" fontSize="11" fontWeight="900"
+          fill="#22c55e">
+          {Math.floor(cursor)}'
+        </text>
+      </svg>
+
+      {/* 스크러버 */}
+      <input
+        type="range" min={0} max={90} step={1} value={Math.round(cursor)}
+        onChange={e => setCursor(Number(e.target.value))}
+        className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-emerald-500 bg-white/10"
+      />
+
+      {/* 스크러버 레이블 */}
+      <div className="flex justify-between text-[9px] font-black text-slate-600 -mt-1">
+        <span>0'</span>
+        <span>HT</span>
+        <span>FT</span>
       </div>
     </div>
   );
