@@ -449,6 +449,13 @@ const POS_COLOR: Record<string, string> = {
   M: 'bg-emerald-500 text-white',
   F: 'bg-red-500 text-white',
 };
+// 번호 배지: 포지션 색(배경) + 보색(글씨)
+const POS_BADGE: Record<string, string> = {
+  G: 'bg-yellow-400 text-violet-900',   // 노랑 → 보색 보라
+  D: 'bg-blue-500 text-orange-300',     // 파랑 → 보색 주황
+  M: 'bg-emerald-500 text-red-200',     // 초록 → 보색 빨강
+  F: 'bg-red-500 text-cyan-200',        // 빨강 → 보색 시안
+};
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
 // 선수 원형 사진 토큰 (피치 위 사용)
@@ -469,7 +476,7 @@ function PlayerToken({ id, number, pos }: { id: number; number: number; pos: str
         </div>
       )}
       {!failed && (
-        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-black flex items-center justify-center text-[10px] font-black text-white border-2 border-white/50 leading-none shadow">
+        <div className={`absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black border-2 border-white/70 leading-none shadow-lg ${POS_BADGE[pos] ?? 'bg-slate-600 text-white'}`}>
           {number}
         </div>
       )}
