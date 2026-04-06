@@ -451,16 +451,39 @@ const POS_COLOR: Record<string, string> = {
 };
 const POS_LABEL: Record<string, string> = { G: 'GK', D: 'DF', M: 'MF', F: 'FW' };
 
+// 선수 원형 사진 토큰 (피치 위 사용)
+function PlayerToken({ id, number, pos }: { id: number; number: number; pos: string }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <div className="relative">
+      {!failed ? (
+        <img
+          src={`https://media.api-sports.io/football/players/${id}.png`}
+          alt=""
+          className="w-8 h-8 rounded-full object-cover shadow-lg border-2 border-white/40 bg-white/10"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <div className={`w-8 h-8 flex items-center justify-center rounded-full text-[9px] font-black shadow-lg ${POS_COLOR[pos] ?? 'bg-slate-500 text-white'}`}>
+          {number}
+        </div>
+      )}
+      {!failed && (
+        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-black/80 flex items-center justify-center text-[7px] font-black text-white border border-white/20 leading-none">
+          {number}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function PitchView({ lineup }: { lineup: any }) {
   const hasGrid = (lineup.startXI ?? []).some((p: any) => p.grid);
   if (!hasGrid || !lineup.formation) return null;
 
-  // formation e.g. "4-3-3" → parse max row number
   const formRows = lineup.formation.split('-').map(Number);
-  // rows: 1=GK, then each formation segment adds a row
-  const maxRow = formRows.length + 1; // +1 for GK row
+  const maxRow = formRows.length + 1;
 
-  // group players by row
   const byRow = new Map<number, any[]>();
   for (const p of (lineup.startXI ?? [])) {
     if (!p.grid) continue;
@@ -469,30 +492,16 @@ function PitchView({ lineup }: { lineup: any }) {
     byRow.get(row)!.push(p);
   }
 
-  const posColor = (pos: string) => POS_COLOR[pos] ?? 'bg-slate-500 text-white';
-
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden border border-white/10"
       style={{ background: 'linear-gradient(180deg, #14532d 0%, #166534 50%, #14532d 100%)', aspectRatio: '2/3' }}
     >
-      {/* pitch lines */}
-      {/* center line */}
       <div className="absolute left-0 right-0 border-t border-white/20" style={{ top: '50%' }} />
-      {/* center circle */}
-      <div className="absolute" style={{
-        top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        width: '28%', aspectRatio: '1',
-        borderRadius: '50%',
-        border: '1px solid rgba(255,255,255,0.2)',
-      }} />
-      {/* penalty box top */}
+      <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '28%', aspectRatio: '1', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} />
       <div className="absolute border border-white/20" style={{ top: 0, left: '25%', right: '25%', height: '14%' }} />
-      {/* penalty box bottom */}
       <div className="absolute border border-white/20" style={{ bottom: 0, left: '25%', right: '25%', height: '14%' }} />
 
-      {/* players */}
       {[...byRow.entries()].map(([row, players]) => {
         const topPct = ((row - 0.5) / maxRow) * 100;
         return players.map((p, ci) => {
@@ -501,16 +510,9 @@ function PitchView({ lineup }: { lineup: any }) {
             <div
               key={p.number}
               className="absolute flex flex-col items-center"
-              style={{
-                top: `${topPct}%`,
-                left: `${leftPct}%`,
-                transform: 'translate(-50%, -50%)',
-                width: '14%',
-              }}
+              style={{ top: `${topPct}%`, left: `${leftPct}%`, transform: 'translate(-50%, -50%)', width: '16%' }}
             >
-              <div className={`flex items-center justify-center rounded-full text-[9px] font-black w-6 h-6 shrink-0 shadow-lg ${posColor(p.pos)}`}>
-                {p.number}
-              </div>
+              <PlayerToken id={p.id} number={p.number} pos={p.pos} />
               <span className="text-[7px] font-bold text-white text-center leading-tight mt-0.5 drop-shadow-md max-w-full truncate px-0.5">
                 {p.name?.split(' ').slice(-1)[0]}
               </span>
@@ -522,25 +524,71 @@ function PitchView({ lineup }: { lineup: any }) {
   );
 }
 
-export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, onPlayerClick }: { lineups: any[], playerRatings?: Record<number, string>, playerStatsMap?: Record<number, any>, onPlayerClick?: (p: any) => void }) {
+// 선수 한 칸 (좌/우 공용)
+function PlayerCell({ p, team, playerRatings, playerStatsMap, onPlayerClick, isHome }: {
+  p: any; team: string;
+  playerRatings: Record<number, string>;
+  playerStatsMap: Record<number, any>;
+  onPlayerClick?: (p: any) => void;
+  isHome: boolean;
+}) {
+  if (!p) return <div className="p-1.5" />;
+  const rating = playerRatings[p.id] ? parseFloat(playerRatings[p.id]) : null;
+  const posColor =
+    p.pos === 'G' ? 'text-yellow-400' :
+    p.pos === 'D' ? 'text-blue-400' :
+    p.pos === 'M' ? 'text-emerald-400' : 'text-red-400';
+
+  return (
+    <div
+      className={`flex items-center gap-1.5 p-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors' : ''} ${isHome ? '' : ''}`}
+      onClick={() => onPlayerClick?.({ ...p, team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
+    >
+      <img
+        src={`https://media.api-sports.io/football/players/${p.id}.png`}
+        alt=""
+        className="w-6 h-6 rounded-full object-cover shrink-0 bg-white/5"
+        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+      />
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] font-black text-white truncate leading-tight">{p.name}</div>
+        <div className="flex items-center gap-1">
+          <span className={`text-[8px] font-black ${posColor}`}>{POS_LABEL[p.pos] ?? p.pos}</span>
+          <span className="text-[8px] text-slate-600">#{p.number}</span>
+          {rating != null && (
+            <span className={`text-[8px] font-black ${rating >= 7 ? 'text-amber-400' : 'text-slate-500'}`}>★{rating.toFixed(1)}</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, onPlayerClick }: {
+  lineups: any[];
+  playerRatings?: Record<number, string>;
+  playerStatsMap?: Record<number, any>;
+  onPlayerClick?: (p: any) => void;
+}) {
   if (!lineups || lineups.length === 0) {
     return <div className="py-12 text-center text-slate-600 text-sm font-bold">Lineup not announced</div>;
   }
+
+  const [home, away] = lineups;
   const hasVisual = lineups.some(l => l.formation && (l.startXI ?? []).some((p: any) => p.grid));
+  const maxXI  = Math.max(home?.startXI?.length ?? 0, away?.startXI?.length ?? 0);
+  const maxSub = Math.max(home?.substitutes?.length ?? 0, away?.substitutes?.length ?? 0);
+
   return (
-    <div className="space-y-6">
-      {/* 시각적 피치 */}
+    <div className="space-y-4">
+      {/* 피치 뷰 (사진 토큰) */}
       {hasVisual && (
-        <div className="grid grid-cols-2 gap-3">
-          {lineups.slice(0, 2).map((l) => (
+        <div className="grid grid-cols-2 gap-2">
+          {[home, away].filter(Boolean).map((l, i) => (
             <div key={l.teamId}>
-              <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2 text-center truncate">{l.team}</div>
+              <div className={`text-[9px] font-black uppercase tracking-widest mb-1.5 text-center truncate ${i === 0 ? 'text-indigo-400' : 'text-orange-400'}`}>{l.team}</div>
               <PitchView lineup={l} />
-              {l.formation && (
-                <div className="text-center mt-1">
-                  <span className="text-[9px] font-black text-indigo-400">{l.formation}</span>
-                </div>
-              )}
+              {l.formation && <div className={`text-center mt-1 text-[9px] font-black ${i === 0 ? 'text-indigo-400' : 'text-orange-400'}`}>{l.formation}</div>}
             </div>
           ))}
         </div>
@@ -550,82 +598,51 @@ export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, on
         <div className="text-[9px] font-bold text-slate-600 text-center">Tap a player to see stats</div>
       )}
 
-      {/* 상세 리스트 */}
-      {lineups.map((l) => (
-        <div key={l.teamId} className="bg-black/20 rounded-2xl p-4 border border-white/5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-black text-white">{l.team}</span>
-            <div className="flex gap-2 flex-wrap justify-end">
-              {l.formation && (
-                <span className="text-[10px] font-black text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full border border-indigo-500/20">{l.formation}</span>
-              )}
-              {l.coach && (
-                <span className="text-[10px] font-bold text-slate-500 bg-white/5 px-2 py-0.5 rounded-full">👔 {l.coach}</span>
-              )}
-            </div>
-          </div>
-          <div className="mb-3">
-            <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Starting XI</div>
-            <div className="grid grid-cols-2 gap-1">
-              {l.startXI.map((p: any) => (
-                <div
-                  key={p.number}
-                  className={`flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all' : ''}`}
-                  onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
-                >
-                  <span className="text-[10px] font-black text-slate-500 w-5 text-right tabular-nums shrink-0">{p.number}</span>
-                  <img
-                    src={`https://media.api-sports.io/football/players/${p.id}.png`}
-                    alt=""
-                    className="w-6 h-6 rounded-full object-cover shrink-0 bg-white/5"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                  />
-                  <span className={`text-[9px] font-black px-1 rounded shrink-0 ${
-                    p.pos === 'G' ? 'text-yellow-400 bg-yellow-500/10' :
-                    p.pos === 'D' ? 'text-blue-400 bg-blue-500/10' :
-                    p.pos === 'M' ? 'text-emerald-400 bg-emerald-500/10' :
-                    'text-red-400 bg-red-500/10'
-                  }`}>{POS_LABEL[p.pos] ?? p.pos}</span>
-                  <span className="text-xs font-bold text-white truncate">{p.name}</span>
-                  {playerRatings[p.id] && (
-                    <span className={`ml-auto shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded ${parseFloat(playerRatings[p.id]) >= 7.0 ? 'bg-amber-500/20 text-amber-500' : parseFloat(playerRatings[p.id]) >= 6.0 ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/20 text-slate-400'}`}>
-                      ★ {parseFloat(playerRatings[p.id]).toFixed(1)}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          {l.substitutes?.length > 0 && (
-            <div>
-              <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">Substitutes</div>
-              <div className="grid grid-cols-2 gap-1">
-                {l.substitutes.map((p: any) => (
-                  <div
-                    key={p.number}
-                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
-                    onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
-                  >
-                    <span className="text-[10px] font-black text-slate-600 w-5 text-right tabular-nums shrink-0">{p.number}</span>
-                    <img
-                      src={`https://media.api-sports.io/football/players/${p.id}.png`}
-                      alt=""
-                      className="w-5 h-5 rounded-full object-cover shrink-0 bg-white/5 opacity-60"
-                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                    />
-                    <span className="text-xs text-slate-500 truncate">{p.name}</span>
-                    {playerRatings[p.id] && (
-                      <span className={`ml-auto shrink-0 text-[9px] font-black px-1 py-0.5 rounded ${parseFloat(playerRatings[p.id]) >= 7.0 ? 'text-amber-500' : 'text-slate-500'}`}>
-                        {parseFloat(playerRatings[p.id]).toFixed(1)}
-                      </span>
-                    )}
-                  </div>
-                ))}
+      {/* 홈 / 원정 나란히 */}
+      <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+        {/* 팀 헤더 */}
+        <div className="grid grid-cols-2">
+          {[home, away].filter(Boolean).map((l, i) => (
+            <div key={l.teamId} className={`p-3 ${i === 0 ? 'border-r border-white/5' : ''}`}>
+              <div className="text-[11px] font-black text-white truncate">{l.team}</div>
+              <div className="flex items-center gap-2 mt-0.5">
+                {l.formation && <span className={`text-[10px] font-black ${i === 0 ? 'text-indigo-400' : 'text-orange-400'}`}>{l.formation}</span>}
+                {l.coach && <span className="text-[9px] text-slate-600 truncate">👔 {l.coach}</span>}
               </div>
             </div>
-          )}
+          ))}
         </div>
-      ))}
+
+        {/* Starting XI */}
+        <div className="border-t border-white/5 bg-white/[0.02] px-3 py-1">
+          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Starting XI</span>
+        </div>
+        {Array.from({ length: maxXI }).map((_, i) => (
+          <div key={i} className="grid grid-cols-2 border-t border-white/[0.04]">
+            <div className="border-r border-white/[0.04]">
+              <PlayerCell p={home?.startXI?.[i]} team={home?.team} playerRatings={playerRatings} playerStatsMap={playerStatsMap} onPlayerClick={onPlayerClick} isHome />
+            </div>
+            <PlayerCell p={away?.startXI?.[i]} team={away?.team} playerRatings={playerRatings} playerStatsMap={playerStatsMap} onPlayerClick={onPlayerClick} isHome={false} />
+          </div>
+        ))}
+
+        {/* Substitutes */}
+        {maxSub > 0 && (
+          <>
+            <div className="border-t border-white/5 bg-white/[0.02] px-3 py-1 mt-1">
+              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Substitutes</span>
+            </div>
+            {Array.from({ length: maxSub }).map((_, i) => (
+              <div key={i} className="grid grid-cols-2 border-t border-white/[0.04] opacity-70">
+                <div className="border-r border-white/[0.04]">
+                  <PlayerCell p={home?.substitutes?.[i]} team={home?.team} playerRatings={playerRatings} playerStatsMap={playerStatsMap} onPlayerClick={onPlayerClick} isHome />
+                </div>
+                <PlayerCell p={away?.substitutes?.[i]} team={away?.team} playerRatings={playerRatings} playerStatsMap={playerStatsMap} onPlayerClick={onPlayerClick} isHome={false} />
+              </div>
+            ))}
+          </>
+        )}
+      </div>
     </div>
   );
 }
