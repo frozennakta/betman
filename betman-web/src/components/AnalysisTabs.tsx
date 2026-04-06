@@ -460,16 +460,16 @@ function PlayerToken({ id, number, pos }: { id: number; number: number; pos: str
         <img
           src={`https://media.api-sports.io/football/players/${id}.png`}
           alt=""
-          className="w-8 h-8 rounded-full object-cover shadow-lg border-2 border-white/40 bg-white/10"
+          className="w-12 h-12 rounded-full object-cover shadow-xl border-2 border-white/60 bg-white/10"
           onError={() => setFailed(true)}
         />
       ) : (
-        <div className={`w-8 h-8 flex items-center justify-center rounded-full text-[9px] font-black shadow-lg ${POS_COLOR[pos] ?? 'bg-slate-500 text-white'}`}>
+        <div className={`w-12 h-12 flex items-center justify-center rounded-full text-sm font-black shadow-xl border-2 border-white/60 ${POS_COLOR[pos] ?? 'bg-slate-500 text-white'}`}>
           {number}
         </div>
       )}
       {!failed && (
-        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-black/80 flex items-center justify-center text-[7px] font-black text-white border border-white/20 leading-none">
+        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-black flex items-center justify-center text-[10px] font-black text-white border-2 border-white/50 leading-none shadow">
           {number}
         </div>
       )}
@@ -495,12 +495,17 @@ function PitchView({ lineup }: { lineup: any }) {
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden border border-white/10"
-      style={{ background: 'linear-gradient(180deg, #14532d 0%, #166534 50%, #14532d 100%)', aspectRatio: '2/3' }}
+      style={{
+        background: 'linear-gradient(180deg, #2a7a3b 0%, #2f8c43 12.5%, #2a7a3b 25%, #2f8c43 37.5%, #2a7a3b 50%, #2f8c43 62.5%, #2a7a3b 75%, #2f8c43 87.5%, #2a7a3b 100%)',
+        aspectRatio: '2/3',
+      }}
     >
-      <div className="absolute left-0 right-0 border-t border-white/20" style={{ top: '50%' }} />
-      <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '28%', aspectRatio: '1', borderRadius: '50%', border: '1px solid rgba(255,255,255,0.2)' }} />
-      <div className="absolute border border-white/20" style={{ top: 0, left: '25%', right: '25%', height: '14%' }} />
-      <div className="absolute border border-white/20" style={{ bottom: 0, left: '25%', right: '25%', height: '14%' }} />
+      <div className="absolute left-0 right-0 border-t border-white/35" style={{ top: '50%' }} />
+      <div className="absolute" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '30%', aspectRatio: '1', borderRadius: '50%', border: '1.5px solid rgba(255,255,255,0.35)' }} />
+      <div className="absolute border-2 border-white/35 rounded-sm" style={{ top: '1%', left: '22%', right: '22%', height: '15%' }} />
+      <div className="absolute border-2 border-white/35 rounded-sm" style={{ bottom: '1%', left: '22%', right: '22%', height: '15%' }} />
+      {/* 센터 스팟 */}
+      <div className="absolute w-1.5 h-1.5 rounded-full bg-white/40" style={{ top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }} />
 
       {[...byRow.entries()].map(([row, players]) => {
         const topPct = ((row - 0.5) / maxRow) * 100;
@@ -510,10 +515,10 @@ function PitchView({ lineup }: { lineup: any }) {
             <div
               key={p.number}
               className="absolute flex flex-col items-center"
-              style={{ top: `${topPct}%`, left: `${leftPct}%`, transform: 'translate(-50%, -50%)', width: '16%' }}
+              style={{ top: `${topPct}%`, left: `${leftPct}%`, transform: 'translate(-50%, -50%)', width: '20%' }}
             >
               <PlayerToken id={p.id} number={p.number} pos={p.pos} />
-              <span className="text-[7px] font-bold text-white text-center leading-tight mt-0.5 drop-shadow-md max-w-full truncate px-0.5">
+              <span className="text-[9px] font-bold text-white text-center leading-tight mt-1 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] max-w-full truncate px-0.5">
                 {p.name?.split(' ').slice(-1)[0]}
               </span>
             </div>
@@ -541,22 +546,22 @@ function PlayerCell({ p, team, playerRatings, playerStatsMap, onPlayerClick, isH
 
   return (
     <div
-      className={`flex items-center gap-1.5 p-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors' : ''} ${isHome ? '' : ''}`}
+      className={`flex items-center gap-2 p-2 ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 active:bg-white/10 transition-colors' : ''}`}
       onClick={() => onPlayerClick?.({ ...p, team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
     >
       <img
         src={`https://media.api-sports.io/football/players/${p.id}.png`}
         alt=""
-        className="w-6 h-6 rounded-full object-cover shrink-0 bg-white/5"
+        className="w-8 h-8 rounded-full object-cover shrink-0 bg-white/5 border border-white/10"
         onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
       />
       <div className="min-w-0 flex-1">
-        <div className="text-[10px] font-black text-white truncate leading-tight">{p.name}</div>
-        <div className="flex items-center gap-1">
-          <span className={`text-[8px] font-black ${posColor}`}>{POS_LABEL[p.pos] ?? p.pos}</span>
-          <span className="text-[8px] text-slate-600">#{p.number}</span>
+        <div className="text-xs font-black text-white truncate leading-tight">{p.name}</div>
+        <div className="flex items-center gap-1 mt-0.5">
+          <span className={`text-[9px] font-black ${posColor}`}>{POS_LABEL[p.pos] ?? p.pos}</span>
+          <span className="text-[9px] text-slate-500">#{p.number}</span>
           {rating != null && (
-            <span className={`text-[8px] font-black ${rating >= 7 ? 'text-amber-400' : 'text-slate-500'}`}>★{rating.toFixed(1)}</span>
+            <span className={`text-[9px] font-black ${rating >= 7 ? 'text-amber-400' : 'text-slate-500'}`}>★{rating.toFixed(1)}</span>
           )}
         </div>
       </div>
@@ -604,18 +609,18 @@ export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, on
         <div className="grid grid-cols-2">
           {[home, away].filter(Boolean).map((l, i) => (
             <div key={l.teamId} className={`p-3 ${i === 0 ? 'border-r border-white/5' : ''}`}>
-              <div className="text-[11px] font-black text-white truncate">{l.team}</div>
+              <div className="text-sm font-black text-white truncate">{l.team}</div>
               <div className="flex items-center gap-2 mt-0.5">
-                {l.formation && <span className={`text-[10px] font-black ${i === 0 ? 'text-indigo-400' : 'text-orange-400'}`}>{l.formation}</span>}
-                {l.coach && <span className="text-[9px] text-slate-600 truncate">👔 {l.coach}</span>}
+                {l.formation && <span className={`text-xs font-black ${i === 0 ? 'text-indigo-400' : 'text-orange-400'}`}>{l.formation}</span>}
+                {l.coach && <span className="text-[10px] text-slate-500 truncate">👔 {l.coach}</span>}
               </div>
             </div>
           ))}
         </div>
 
         {/* Starting XI */}
-        <div className="border-t border-white/5 bg-white/[0.02] px-3 py-1">
-          <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Starting XI</span>
+        <div className="border-t border-white/5 bg-white/[0.02] px-3 py-1.5">
+          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Starting XI</span>
         </div>
         {Array.from({ length: maxXI }).map((_, i) => (
           <div key={i} className="grid grid-cols-2 border-t border-white/[0.04]">
@@ -629,8 +634,8 @@ export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, on
         {/* Substitutes */}
         {maxSub > 0 && (
           <>
-            <div className="border-t border-white/5 bg-white/[0.02] px-3 py-1 mt-1">
-              <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Substitutes</span>
+            <div className="border-t border-white/5 bg-white/[0.02] px-3 py-1.5 mt-1">
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Substitutes</span>
             </div>
             {Array.from({ length: maxSub }).map((_, i) => (
               <div key={i} className="grid grid-cols-2 border-t border-white/[0.04] opacity-70">
