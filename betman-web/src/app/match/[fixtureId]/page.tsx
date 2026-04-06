@@ -10,7 +10,7 @@ import {
 } from '@/components/AnalysisTabs';
 import html2canvas from 'html2canvas';
 
-const TABS = ['Analysis', 'Predict', 'Lineup', 'Absences', 'Stats', 'Form', 'Standings', 'Odds', 'Notes', 'Chat'] as const;
+const TABS = ['Stats', 'Analysis', 'Predict', 'Lineup', 'Absences', 'Form', 'Standings', 'Odds', 'Notes', 'Chat'] as const;
 type TabKey = typeof TABS[number];
 
 export default function MatchPage() {
@@ -20,7 +20,7 @@ export default function MatchPage() {
 
   const [analysis, setAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>('Analysis');
+  const [tab, setTab] = useState<TabKey>('Stats');
   const [isFav, setIsFav] = useState(false);
   const captureRef = useRef<HTMLDivElement>(null);
 
