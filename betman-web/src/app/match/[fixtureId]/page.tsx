@@ -192,7 +192,59 @@ export default function MatchPage() {
         {/* 경기 헤더 카드 */}
         <div className="bg-[var(--bg-card)] border border-white/10 rounded-3xl p-5 mb-6 shadow-xl">
 
-          {/* ① 리그 + 즐겨찾기 */}
+          {/* ① 구장 + 날씨 (최상단) */}
+          {(game.venue?.name || weather) && (
+            <div className="flex items-center justify-between gap-3 bg-white/[0.04] rounded-2xl px-4 py-3 border border-white/5 mb-4">
+              <div className="flex items-start gap-2.5 min-w-0">
+                {game.venue?.name || game.venue?.city ? (
+                  <a
+                    href={`https://www.google.com/maps/search/${encodeURIComponent([game.venue?.name, game.venue?.city].filter(Boolean).join(' '))}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 mt-0.5 text-indigo-400 hover:text-indigo-300 transition-colors"
+                    title="Google Maps에서 보기"
+                  >
+                    <MapPin className="w-4 h-4" />
+                  </a>
+                ) : (
+                  <MapPin className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                )}
+                <div className="min-w-0">
+                  {game.venue?.city && (
+                    <div className="text-[13px] font-black text-white leading-tight truncate">{game.venue.city}</div>
+                  )}
+                  {game.venue?.name && (
+                    <div className="text-[11px] font-medium text-slate-500 leading-tight truncate mt-0.5">{game.venue.name}</div>
+                  )}
+                </div>
+              </div>
+              {weather && (
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-3xl leading-none">{weather.emoji}</span>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                    <div className="flex items-center gap-1 text-[12px] font-bold text-slate-300">
+                      <Thermometer className="w-3 h-3 text-orange-400 shrink-0" />{weather.temp}°C
+                    </div>
+                    <div className="flex items-center gap-1 text-[12px] font-bold text-slate-400">
+                      <Wind className="w-3 h-3 text-sky-400 shrink-0" />{weather.wind} km/h
+                    </div>
+                    {weather.humidity != null && (
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                        <span className="text-blue-400">💧</span>{weather.humidity}%
+                      </div>
+                    )}
+                    {weather.pressure != null && (
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
+                        <span>🔽</span>{weather.pressure} hPa
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ② 리그 + 즐겨찾기 */}
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-[11px] font-black text-slate-500 uppercase tracking-widest truncate">
@@ -397,55 +449,13 @@ export default function MatchPage() {
             </div>
           )}
 
-          {/* ⑥ 구장 + 날씨 + 심판 */}
-          {(game.venue?.name || game.referee || weather || analysis?.season) && (
-            <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
-
-              {/* 구장 + 날씨 */}
-              {(game.venue?.name || weather) && (
-                <div className="flex items-center justify-between gap-3 bg-white/[0.04] rounded-2xl px-4 py-3 border border-white/5">
-                  <div className="flex items-start gap-2.5 min-w-0">
-                    <MapPin className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                    <div className="min-w-0">
-                      {game.venue?.city && (
-                        <div className="text-[13px] font-black text-white leading-tight truncate">{game.venue.city}</div>
-                      )}
-                      {game.venue?.name && (
-                        <div className="text-[11px] font-medium text-slate-500 leading-tight truncate mt-0.5">{game.venue.name}</div>
-                      )}
-                    </div>
-                  </div>
-                  {weather && (
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-3xl leading-none">{weather.emoji}</span>
-                      <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                        <div className="flex items-center gap-1 text-[12px] font-bold text-slate-300">
-                          <Thermometer className="w-3 h-3 text-orange-400 shrink-0" />{weather.temp}°C
-                        </div>
-                        <div className="flex items-center gap-1 text-[12px] font-bold text-slate-400">
-                          <Wind className="w-3 h-3 text-sky-400 shrink-0" />{weather.wind} km/h
-                        </div>
-                        {weather.humidity != null && (
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
-                            <span className="text-blue-400">💧</span>{weather.humidity}%
-                          </div>
-                        )}
-                        {weather.pressure != null && (
-                          <div className="flex items-center gap-1 text-[11px] font-bold text-slate-500">
-                            <span>🔽</span>{weather.pressure} hPa
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* 심판 + 시즌 */}
+          {/* ⑥ 심판 + 시즌 */}
+          {(game.referee || analysis?.season) && (
+            <div className="mt-3 pt-3 border-t border-white/5">
               <div className="flex flex-wrap gap-2">
                 {analysis?.season && (
                   <span className="text-[11px] font-bold text-slate-400 bg-white/5 px-2.5 py-1 rounded-lg">
-                    📅 {analysis.season}
+                    📅 Season {analysis.season}
                   </span>
                 )}
                 {game.referee && (
