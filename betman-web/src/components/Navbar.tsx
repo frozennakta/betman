@@ -3,14 +3,12 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Home, LayoutGrid, Layers, BarChart3, Menu, X, Trophy, BookOpen, Sun, Moon } from 'lucide-react';
+import { Home, BarChart3, Menu, X, Trophy, BookOpen } from 'lucide-react';
 import { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 
 const NavItems = [
   { href: '/', label: 'Home', icon: Home, color: 'text-red-400' },
-  { href: '/proto', label: 'Proto', icon: LayoutGrid, color: 'text-emerald-400' },
-  { href: '/toto', label: 'Toto', icon: Layers, color: 'text-blue-400' },
   { href: '/records', label: 'Results', icon: BarChart3, color: 'text-amber-400' },
   { href: '/standings', label: 'Standings', icon: Trophy, color: 'text-yellow-400' },
   { href: '/bet-tracker', label: 'Bet Log', icon: BookOpen, color: 'text-purple-400' },

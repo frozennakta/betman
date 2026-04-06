@@ -60,6 +60,7 @@ function normalizeGame(match: LiveMatch, index: number) {
     referee: match.referee ?? null,
     homeTeamId: match.homeTeamId,
     awayTeamId: match.awayTeamId,
+    leagueId: match.leagueId,
   };
 }
 
