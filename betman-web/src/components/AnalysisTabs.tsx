@@ -570,10 +570,16 @@ export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, on
               {l.startXI.map((p: any) => (
                 <div
                   key={p.number}
-                  className={`flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all' : ''}`}
+                  className={`flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1.5 ${onPlayerClick ? 'cursor-pointer hover:bg-white/10 active:scale-[0.98] transition-all' : ''}`}
                   onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
                 >
                   <span className="text-[10px] font-black text-slate-500 w-5 text-right tabular-nums shrink-0">{p.number}</span>
+                  <img
+                    src={`https://media.api-sports.io/football/players/${p.id}.png`}
+                    alt=""
+                    className="w-6 h-6 rounded-full object-cover shrink-0 bg-white/5"
+                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                  />
                   <span className={`text-[9px] font-black px-1 rounded shrink-0 ${
                     p.pos === 'G' ? 'text-yellow-400 bg-yellow-500/10' :
                     p.pos === 'D' ? 'text-blue-400 bg-blue-500/10' :
@@ -597,10 +603,16 @@ export function LineupTab({ lineups, playerRatings = {}, playerStatsMap = {}, on
                 {l.substitutes.map((p: any) => (
                   <div
                     key={p.number}
-                    className={`flex items-center gap-2 px-2 py-1 rounded-lg ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${onPlayerClick ? 'cursor-pointer hover:bg-white/5 transition-all' : ''}`}
                     onClick={() => onPlayerClick?.({ ...p, team: l.team, rating: playerRatings[p.id], stats: playerStatsMap[p.id] ?? {} })}
                   >
                     <span className="text-[10px] font-black text-slate-600 w-5 text-right tabular-nums shrink-0">{p.number}</span>
+                    <img
+                      src={`https://media.api-sports.io/football/players/${p.id}.png`}
+                      alt=""
+                      className="w-5 h-5 rounded-full object-cover shrink-0 bg-white/5 opacity-60"
+                      onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                    />
                     <span className="text-xs text-slate-500 truncate">{p.name}</span>
                     {playerRatings[p.id] && (
                       <span className={`ml-auto shrink-0 text-[9px] font-black px-1 py-0.5 rounded ${parseFloat(playerRatings[p.id]) >= 7.0 ? 'text-amber-500' : 'text-slate-500'}`}>
@@ -1520,10 +1532,16 @@ export function PlayerStatCard({ player, onClose }: { player: any; onClose: () =
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <div className="text-base font-black text-white">{player.name}</div>
-            <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-start gap-3 mb-4">
+          <img
+            src={`https://media.api-sports.io/football/players/${player.id}.png`}
+            alt=""
+            className="w-14 h-14 rounded-2xl object-cover shrink-0 bg-white/5 border border-white/10"
+            onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+          />
+          <div className="flex-1 min-w-0">
+            <div className="text-base font-black text-white leading-tight">{player.name}</div>
+            <div className="flex items-center gap-2 mt-1 flex-wrap">
               <span className={`text-[10px] font-black px-2 py-0.5 rounded ${
                 player.pos === 'G' ? 'bg-yellow-500/20 text-yellow-400' :
                 player.pos === 'D' ? 'bg-blue-500/20 text-blue-400' :
@@ -1531,11 +1549,11 @@ export function PlayerStatCard({ player, onClose }: { player: any; onClose: () =
                 'bg-red-500/20 text-red-400'
               }`}>{player.pos === 'G' ? 'GK' : player.pos === 'D' ? 'DF' : player.pos === 'M' ? 'MF' : 'FW'}</span>
               <span className="text-[10px] text-slate-500 font-bold">#{player.number}</span>
-              <span className="text-[10px] text-slate-500 font-bold">{player.team}</span>
+              <span className="text-[10px] text-slate-500 font-bold truncate">{player.team}</span>
             </div>
           </div>
           {rating != null && (
-            <div className={`text-2xl font-black ${ratingColor}`}>{rating.toFixed(1)}</div>
+            <div className={`text-2xl font-black shrink-0 ${ratingColor}`}>{rating.toFixed(1)}</div>
           )}
         </div>
 
@@ -2043,8 +2061,14 @@ export function TopPlayersTab({ playerStatsMap, lineups }: {
         <div className="text-[9px] font-black text-slate-600 uppercase tracking-widest mb-2">⭐ Match Ratings</div>
         <div className="space-y-1">
           {allPlayers.slice(0, 11).map((p, i) => (
-            <div key={p.id} className="flex items-center gap-3 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2">
-              <span className="w-5 text-[11px] font-black text-slate-600 text-center shrink-0">{i + 1}</span>
+            <div key={p.id} className="flex items-center gap-2.5 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2">
+              <span className="w-4 text-[10px] font-black text-slate-600 text-center shrink-0">{i + 1}</span>
+              <img
+                src={`https://media.api-sports.io/football/players/${p.id}.png`}
+                alt=""
+                className="w-7 h-7 rounded-full object-cover shrink-0 bg-white/5"
+                onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+              />
               <div className="flex-1 min-w-0">
                 <div className="text-[11px] font-black text-white truncate">{p.name}</div>
                 <div className="flex items-center gap-2">
