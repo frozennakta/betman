@@ -56,7 +56,7 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
   const isBig      = BIG_LEAGUES.has(game.league);
   const liveMinute = useLiveMinute(game);
   const localDT    = useLocalDateTime(game.date);
-  const { flag, code } = getCountryDisplay(game.country || '');
+  const { code, iso2 } = getCountryDisplay(game.country || '');
   const fixtureId  = game.id?.replace('fixture_', '');
 
   // 골 스코어 변경 감지 → 플래시
@@ -142,7 +142,14 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
           {isLive ? (liveMinute || `${game.elapsed ?? '–'}'`) : isFinished ? 'FT' : (localDT.time || game.matchTime)}
         </span>
         <span className={`text-[9px] font-black shrink-0 px-1 py-0.5 rounded flex items-center gap-0.5 ${isTomatoMode ? 'text-slate-500 bg-white/5' : 'text-slate-500 bg-zinc-100'}`}>
-          {flag ? <span className="text-[11px] leading-none">{flag}</span> : null}
+          {iso2 && (
+            <img
+              src={`https://flagcdn.com/w20/${iso2.toLowerCase()}.png`}
+              alt={iso2}
+              className="w-4 h-3 object-cover rounded-sm shrink-0"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+            />
+          )}
           {code}
         </span>
         <span className={`text-[10px] sm:text-[11px] font-medium flex-1 leading-none ${isTomatoMode ? 'text-slate-500' : 'text-slate-400'}`}>

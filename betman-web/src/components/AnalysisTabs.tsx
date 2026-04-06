@@ -36,54 +36,60 @@ export function useLocalDateTime(isoDate: string | undefined) {
   return dt;
 }
 
+const COUNTRY_ISO2: Record<string, string> = {
+  Afghanistan:'AF', Albania:'AL', Algeria:'DZ', Argentina:'AR', Armenia:'AM',
+  Australia:'AU', Austria:'AT', Azerbaijan:'AZ', Bahrain:'BH', Bangladesh:'BD',
+  Belarus:'BY', Belgium:'BE', Bolivia:'BO', Bosnia:'BA', 'Bosnia and Herzegovina':'BA',
+  Brazil:'BR', Bulgaria:'BG', 'Burkina Faso':'BF', Cameroon:'CM', Canada:'CA',
+  Chile:'CL', China:'CN', Colombia:'CO', Congo:'CG', 'Costa Rica':'CR',
+  Croatia:'HR', Cuba:'CU', Cyprus:'CY', 'Czech Republic':'CZ', Czechia:'CZ',
+  Denmark:'DK', 'DR Congo':'CD', Ecuador:'EC', Egypt:'EG', 'El Salvador':'SV',
+  England:'GB', Estonia:'EE', Ethiopia:'ET', Finland:'FI', France:'FR',
+  Georgia:'GE', Germany:'DE', Ghana:'GH', Greece:'GR', Guatemala:'GT',
+  Honduras:'HN', 'Hong Kong':'HK', Hungary:'HU', Iceland:'IS', India:'IN',
+  Indonesia:'ID', Iran:'IR', Iraq:'IQ', Ireland:'IE', Israel:'IL',
+  Italy:'IT', 'Ivory Coast':'CI', Jamaica:'JM', Japan:'JP', Jordan:'JO',
+  Kazakhstan:'KZ', Kenya:'KE', Kosovo:'XK', Kuwait:'KW', Latvia:'LV',
+  Lebanon:'LB', Libya:'LY', Lithuania:'LT', Luxembourg:'LU', Malaysia:'MY',
+  Mali:'ML', Malta:'MT', Mexico:'MX', Moldova:'MD', Montenegro:'ME',
+  Morocco:'MA', Mozambique:'MZ', Netherlands:'NL', 'New Zealand':'NZ',
+  Nicaragua:'NI', Nigeria:'NG', 'North Korea':'KP', 'North Macedonia':'MK',
+  Norway:'NO', Oman:'OM', Pakistan:'PK', Palestine:'PS', Panama:'PA',
+  Paraguay:'PY', Peru:'PE', Philippines:'PH', Poland:'PL', Portugal:'PT',
+  Qatar:'QA', Romania:'RO', Russia:'RU', Rwanda:'RW', 'Saudi Arabia':'SA',
+  Scotland:'GB', Senegal:'SN', Serbia:'RS', Singapore:'SG', Slovakia:'SK',
+  Slovenia:'SI', 'South Africa':'ZA', 'South Korea':'KR', Spain:'ES',
+  Sweden:'SE', Switzerland:'CH', Syria:'SY', Taiwan:'TW', Tanzania:'TZ',
+  Thailand:'TH', Tunisia:'TN', Turkey:'TR', Uganda:'UG', Ukraine:'UA',
+  UAE:'AE', 'United Arab Emirates':'AE', 'United Kingdom':'GB',
+  Uruguay:'UY', USA:'US', 'United States':'US', Uzbekistan:'UZ',
+  Venezuela:'VE', Vietnam:'VN', Wales:'GB', Yemen:'YE',
+  Zambia:'ZM', Zimbabwe:'ZW', 'Trinidad and Tobago':'TT',
+};
+
+// 국가명 → ISO 2글자 코드 반환 (flagcdn.com 이미지용)
+export function getIso2(country: string): string {
+  if (!country) return '';
+  if (country.length === 2 && /^[A-Z]{2}$/i.test(country)) return country.toUpperCase();
+  return COUNTRY_ISO2[country] ?? '';
+}
+
 export function countryFlag(country: string): string {
   if (!country) return '';
-  // 이미 2글자 ISO 코드인 경우 처리 (대소문자 무관)
   if (country.length === 2) {
     const code = country.toUpperCase();
     if (/^[A-Z]{2}$/.test(code)) {
       return [...code].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
     }
   }
-  const map: Record<string, string> = {
-    Afghanistan:'AF', Albania:'AL', Algeria:'DZ', Argentina:'AR', Armenia:'AM',
-    Australia:'AU', Austria:'AT', Azerbaijan:'AZ', Bahrain:'BH', Bangladesh:'BD',
-    Belarus:'BY', Belgium:'BE', Bolivia:'BO', Bosnia:'BA', 'Bosnia and Herzegovina':'BA',
-    Brazil:'BR', Bulgaria:'BG', 'Burkina Faso':'BF', Cameroon:'CM', Canada:'CA',
-    Chile:'CL', China:'CN', Colombia:'CO', Congo:'CG', 'Costa Rica':'CR',
-    Croatia:'HR', Cuba:'CU', Cyprus:'CY', 'Czech Republic':'CZ', Czechia:'CZ',
-    Denmark:'DK', 'DR Congo':'CD', Ecuador:'EC', Egypt:'EG', 'El Salvador':'SV',
-    England:'GB', Estonia:'EE', Ethiopia:'ET', Finland:'FI', France:'FR',
-    Georgia:'GE', Germany:'DE', Ghana:'GH', Greece:'GR', Guatemala:'GT',
-    Honduras:'HN', 'Hong Kong':'HK', Hungary:'HU', Iceland:'IS', India:'IN',
-    Indonesia:'ID', Iran:'IR', Iraq:'IQ', Ireland:'IE', Israel:'IL',
-    Italy:'IT', 'Ivory Coast':'CI', Jamaica:'JM', Japan:'JP', Jordan:'JO',
-    Kazakhstan:'KZ', Kenya:'KE', Kosovo:'XK', Kuwait:'KW', Latvia:'LV',
-    Lebanon:'LB', Libya:'LY', Lithuania:'LT', Luxembourg:'LU', Malaysia:'MY',
-    Mali:'ML', Malta:'MT', Mexico:'MX', Moldova:'MD', Montenegro:'ME',
-    Morocco:'MA', Mozambique:'MZ', Netherlands:'NL', 'New Zealand':'NZ',
-    Nicaragua:'NI', Nigeria:'NG', 'North Korea':'KP', 'North Macedonia':'MK',
-    Norway:'NO', Oman:'OM', Pakistan:'PK', Palestine:'PS', Panama:'PA',
-    Paraguay:'PY', Peru:'PE', Philippines:'PH', Poland:'PL', Portugal:'PT',
-    Qatar:'QA', Romania:'RO', Russia:'RU', Rwanda:'RW', 'Saudi Arabia':'SA',
-    Scotland:'GB', Senegal:'SN', Serbia:'RS', Singapore:'SG', Slovakia:'SK',
-    Slovenia:'SI', 'South Africa':'ZA', 'South Korea':'KR', Spain:'ES',
-    Sweden:'SE', Switzerland:'CH', Syria:'SY', Taiwan:'TW', Tanzania:'TZ',
-    Thailand:'TH', Tunisia:'TN', Turkey:'TR', Uganda:'UG', Ukraine:'UA',
-    UAE:'AE', 'United Arab Emirates':'AE', 'United Kingdom':'GB',
-    Uruguay:'UY', USA:'US', 'United States':'US', Uzbekistan:'UZ',
-    Venezuela:'VE', Vietnam:'VN', Wales:'GB', Yemen:'YE',
-    Zambia:'ZM', Zimbabwe:'ZW', 'Trinidad and Tobago':'TT',
-    World:'🌍', International:'🌍',
-  };
   if (country === 'World' || country === 'International') return '🌍';
-  const code = map[country];
+  const code = COUNTRY_ISO2[country];
   if (!code || code.length !== 2) return '';
   return [...code].map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
 }
 
-export function getCountryDisplay(country: string): { flag: string; code: string } {
-  if (!country) return { flag: '', code: '---' };
+export function getCountryDisplay(country: string): { flag: string; code: string; iso2: string } {
+  if (!country) return { flag: '', code: '---', iso2: '' };
 
   const codeMap: Record<string, string> = {
     Afghanistan:'AFG', Albania:'ALB', Algeria:'ALG', Argentina:'ARG', Armenia:'ARM',
@@ -125,7 +131,7 @@ export function getCountryDisplay(country: string): { flag: string; code: string
     code3 = country.substring(0, 3).toUpperCase();
   }
 
-  return { flag, code: code3 };
+  return { flag, code: code3, iso2: COUNTRY_ISO2[country] ?? '' };
 }
 
 
