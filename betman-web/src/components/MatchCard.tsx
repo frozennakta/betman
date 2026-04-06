@@ -141,7 +141,8 @@ export default function MatchCard({ game, isFavorite, onToggleFav, compact = fal
         <span className={`text-[12px] sm:text-[13px] font-black tabular-nums shrink-0 ${isTomatoMode ? 'text-indigo-400' : 'text-indigo-600'}`}>
           {isLive ? (liveMinute || `${game.elapsed ?? '–'}'`) : isFinished ? 'FT' : (localDT.time || game.matchTime)}
         </span>
-        <span className={`text-[9px] font-black shrink-0 px-1 py-0.5 rounded ${isTomatoMode ? 'text-slate-500 bg-white/5' : 'text-slate-500 bg-zinc-100'}`}>
+        <span className={`text-[9px] font-black shrink-0 px-1 py-0.5 rounded flex items-center gap-0.5 ${isTomatoMode ? 'text-slate-500 bg-white/5' : 'text-slate-500 bg-zinc-100'}`}>
+          {flag ? <span className="text-[11px] leading-none">{flag}</span> : null}
           {code}
         </span>
         <span className={`text-[10px] sm:text-[11px] font-medium flex-1 leading-none ${isTomatoMode ? 'text-slate-500' : 'text-slate-400'}`}>
